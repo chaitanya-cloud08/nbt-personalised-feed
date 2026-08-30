@@ -1,26 +1,133 @@
 @import "tailwindcss";
 
+/* Palette adapted from the NBT design reference (warm off-white surfaces,
+   deep red primary) — kept as CSS variables so it can be swapped later. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --color-background: #faf9f5;
+  --color-surface: #faf9f5;
+  --color-surface-bright: #faf9f5;
+  --color-surface-dim: #dbdad6;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f4f4f0;
+  --color-surface-container: #efeeea;
+  --color-surface-container-high: #e9e8e4;
+  --color-surface-container-highest: #e3e2df;
+  --color-surface-variant: #e3e2df;
+  --color-outline: #8f706c;
+  --color-outline-variant: #e3beb9;
+
+  --color-primary: #8d000a;
+  --color-primary-container: #b31b1b;
+  --color-on-primary: #ffffff;
+  --color-on-primary-container: #ffc6bf;
+
+  --color-secondary: #5f5e5e;
+  --color-secondary-container: #e4e2e1;
+  --color-on-secondary: #ffffff;
+  --color-on-secondary-container: #656464;
+
+  --color-tertiary: #434444;
+  --color-tertiary-container: #5b5b5b;
+
+  --color-on-surface: #1b1c1a;
+  --color-on-surface-variant: #5b403d;
+  --color-on-background: #1b1c1a;
+
+  --color-error: #ba1a1a;
+  --color-error-container: #ffdad6;
+  --color-on-error: #ffffff;
+  --color-on-error-container: #93000a;
+
+  /* Widget accent tints */
+  --color-live-bg: #eff6ff;
+  --color-live-accent: #ba1a1a;
+  --color-festival-bg: #fff7ed;
+  --color-festival-accent: #c2410c;
+  --color-horoscope-bg: #f3e8ff;
+  --color-horoscope-accent: #6b21a8;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-background: var(--color-background);
+  --color-surface: var(--color-surface);
+  --color-surface-bright: var(--color-surface-bright);
+  --color-surface-dim: var(--color-surface-dim);
+  --color-surface-container-lowest: var(--color-surface-container-lowest);
+  --color-surface-container-low: var(--color-surface-container-low);
+  --color-surface-container: var(--color-surface-container);
+  --color-surface-container-high: var(--color-surface-container-high);
+  --color-surface-container-highest: var(--color-surface-container-highest);
+  --color-surface-variant: var(--color-surface-variant);
+  --color-outline: var(--color-outline);
+  --color-outline-variant: var(--color-outline-variant);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-primary: var(--color-primary);
+  --color-primary-container: var(--color-primary-container);
+  --color-on-primary: var(--color-on-primary);
+  --color-on-primary-container: var(--color-on-primary-container);
+
+  --color-secondary: var(--color-secondary);
+  --color-secondary-container: var(--color-secondary-container);
+  --color-on-secondary: var(--color-on-secondary);
+  --color-on-secondary-container: var(--color-on-secondary-container);
+
+  --color-tertiary: var(--color-tertiary);
+  --color-tertiary-container: var(--color-tertiary-container);
+
+  --color-on-surface: var(--color-on-surface);
+  --color-on-surface-variant: var(--color-on-surface-variant);
+  --color-on-background: var(--color-on-background);
+
+  --color-error: var(--color-error);
+  --color-error-container: var(--color-error-container);
+  --color-on-error: var(--color-on-error);
+  --color-on-error-container: var(--color-on-error-container);
+
+  --font-sans: var(--font-devanagari-sans);
+  --font-headline: var(--font-devanagari-serif);
+
+  --color-live-bg: var(--color-live-bg);
+  --color-live-accent: var(--color-live-accent);
+  --color-festival-bg: var(--color-festival-bg);
+  --color-festival-accent: var(--color-festival-accent);
+  --color-horoscope-bg: var(--color-horoscope-bg);
+  --color-horoscope-accent: var(--color-horoscope-accent);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-background);
+  color: var(--color-on-background);
+  font-family: var(--font-devanagari-sans), Arial, sans-serif;
+}
+
+.font-headline {
+  font-family: var(--font-devanagari-serif), Georgia, serif;
+}
+
+/* Horizontal swipeable carousel — no external library needed. */
+.widget-carousel {
+  display: flex;
+  gap: 0.75rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: 0.25rem;
+}
+
+.widget-carousel::-webkit-scrollbar {
+  display: none;
+}
+
+.widget-carousel > * {
+  scroll-snap-align: center;
+  flex: 0 0 auto;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
