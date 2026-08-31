@@ -15,6 +15,12 @@ export default function FeaturedArticleCard({ article }: { article: ScoredArticl
         <span className="material-symbols-outlined text-primary text-[56px]" aria-hidden="true">
           {SECTION_ICONS[article.section]}
         </span>
+        {article.thumbnail_url && (
+          <div
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: `url(${article.thumbnail_url})` }}
+          />
+        )}
         {city && (
           <span className="absolute top-2 left-2 bg-primary text-on-primary px-2 py-1 rounded text-[11px] font-bold uppercase tracking-wider">
             {strings.feed.cityBadge}

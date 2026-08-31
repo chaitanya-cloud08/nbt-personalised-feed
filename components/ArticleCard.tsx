@@ -8,10 +8,16 @@ export default function ArticleCard({ article }: { article: ScoredArticle }) {
   const city = cityLabel(article.city);
   const content = (
     <>
-      <div className="w-20 h-20 shrink-0 rounded-md bg-secondary-container flex items-center justify-center">
+      <div className="w-20 h-20 shrink-0 rounded-md bg-secondary-container flex items-center justify-center relative overflow-hidden">
         <span className="material-symbols-outlined text-primary text-[28px]" aria-hidden="true">
           {SECTION_ICONS[article.section]}
         </span>
+        {article.thumbnail_url && (
+          <div
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: `url(${article.thumbnail_url})` }}
+          />
+        )}
       </div>
       <div className="flex flex-col justify-between py-0.5 flex-1 min-w-0">
         <h3 className="font-headline text-on-surface leading-snug text-[17px] font-semibold line-clamp-3">

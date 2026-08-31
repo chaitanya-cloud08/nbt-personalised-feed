@@ -27,6 +27,7 @@ export interface Article {
   city: string | null; // null = national news
   published_at: string; // ISO timestamp
   url?: string; // link to the source article; absent for mock/demo articles
+  thumbnail_url?: string; // article image; absent for mock/demo articles
 }
 
 export interface ScoredArticle extends Article {

@@ -23,10 +23,18 @@ interface NbtFeedItem {
   hl: string;
   dl: string; // e.g. "Aug 31, 2026, 11:54 AM"
   seolocation: string;
+  imageid?: string;
+  subsecmsid?: number;
+}
+
+interface NbtFeedSection {
+  id: string;
 }
 
 interface NbtFeedResponse {
+  id?: string; // echoes back the msid that was actually served
   items?: NbtFeedItem[];
+  sections?: NbtFeedSection[]; // the valid subsections under this msid
 }
 
 function stripTags(html: string): string {
@@ -56,6 +64,12 @@ function parseNbtDate(dl: string): string {
   return new Date(utcMs).toISOString();
 }
 
+// Confirmed from the feed's own misc_config.pwa_meta.ogimg field, which uses
+// exactly this msid-keyed path on the same CDN.
+function nbtImageUrl(imageid: string): string {
+  return `https://static.langimg.com/photo/msid-${imageid}/navbharat-times.jpg`;
+}
+
 function toArticle(item: NbtFeedItem, section: SectionSlug): Article {
   return {
     id: `nbt-${item.id}`,
@@ -66,7 +80,30 @@ function toArticle(item: NbtFeedItem, section: SectionSlug): Article {
     // NBT's site uses this URL scheme (seolocation + articleshow + id) for
     // both regular articles and photo-gallery items.
     url: `${NBT_ARTICLE_BASE}/${item.seolocation}/articleshow/${item.id}.cms`,
+    thumbnail_url: item.imageid ? nbtImageUrl(item.imageid) : undefined,
   };
+}
+
+/**
+ * Confirms the feed actually served the section we asked for — its own
+ * `id` field echoes back the requested msid — and drops any item whose
+ * subsection isn't one of the ones this response itself lists. This guards
+ * against a wrong or stale msid silently returning an unrelated (or
+ * default/homepage) feed instead of failing loudly.
+ */
+function validateSection(data: NbtFeedResponse, expectedMsid: string): NbtFeedItem[] {
+  if (data.id !== expectedMsid) {
+    throw new Error(`NBT feed for msid ${expectedMsid} returned a different section (id=${data.id})`);
+  }
+  const items = data.items ?? [];
+  const validSubsecIds = new Set([expectedMsid, ...(data.sections ?? []).map((s) => s.id)]);
+  const valid = items.filter((item) => validSubsecIds.has(String(item.subsecmsid ?? expectedMsid)));
+  if (valid.length !== items.length) {
+    console.warn(
+      `NBT feed msid ${expectedMsid}: dropped ${items.length - valid.length} item(s) outside this section's own subsections`
+    );
+  }
+  return valid;
 }
 
 async function fetchNbtItems(msid: string): Promise<NbtFeedItem[]> {
@@ -75,13 +112,13 @@ async function fetchNbtItems(msid: string): Promise<NbtFeedItem[]> {
   });
   if (!res.ok) throw new Error(`NBT feed ${msid} responded ${res.status}`);
   const data: NbtFeedResponse = await res.json();
-  return data.items ?? [];
+  return validateSection(data, msid);
 }
 
 /**
  * Fetches every section with a live source, in parallel. A section whose
- * fetch fails is dropped silently — callers fall back to mock data when the
- * combined result is empty.
+ * fetch or validation fails is dropped silently (logged, not thrown) —
+ * callers fall back to mock data when the combined result is empty.
  */
 export async function fetchLiveArticles(): Promise<Article[]> {
   const entries = Object.entries(SECTION_MSID) as [SectionSlug, string][];
@@ -89,7 +126,8 @@ export async function fetchLiveArticles(): Promise<Article[]> {
     entries.map(async ([section, msid]) => {
       try {
         return (await fetchNbtItems(msid)).map((item) => toArticle(item, section));
-      } catch {
+      } catch (err) {
+        console.error(`Failed to fetch NBT section "${section}" (msid ${msid}):`, err);
         return [];
       }
     })
@@ -102,7 +140,8 @@ export async function fetchHeroArticle(): Promise<Article | null> {
   try {
     const [first] = await fetchNbtItems(HERO_MSID);
     return first ? toArticle(first, "rajniti") : null;
-  } catch {
+  } catch (err) {
+    console.error(`Failed to fetch NBT hero article (msid ${HERO_MSID}):`, err);
     return null;
   }
 }
