@@ -21,7 +21,6 @@ interface NbtFeedItem {
   seolocation: string;
   imageid?: string;
   syn?: string; // short synopsis, when present
-  subsecname?: string;
 }
 
 interface NbtFeedSection {
@@ -237,9 +236,12 @@ export async function fetchStateArticles(citySlug: string | null): Promise<Artic
 
 const ASTRO_MSID = "17127089"; // dharm/astro section — daily per-rashi horoscope posts
 const HOROSCOPE_SNIPPET_LENGTH = 140;
+// Weekly/monthly/yearly roundups mention several rashis in passing and would
+// otherwise false-positive-match any of them; only daily posts are wanted.
+const HOROSCOPE_ROUNDUP_RE = /weekly|monthly|yearly|साप्ताहिक|मासिक|वार्षिक/i;
 
 function shortHoroscopeText(item: NbtFeedItem): string {
-  const source = (item.syn?.trim() || stripTags(item.hl)).trim();
+  const source = stripTags(item.syn?.trim() || item.hl).trim();
   if (source.length <= HOROSCOPE_SNIPPET_LENGTH) return source;
   return `${source.slice(0, HOROSCOPE_SNIPPET_LENGTH).trim()}…`;
 }
@@ -247,10 +249,12 @@ function shortHoroscopeText(item: NbtFeedItem): string {
 /**
  * Today's short-form horoscope for one rashi, sourced live from NBT's
  * astro folder. The feed has no dedicated rashi field, so an item is
- * matched by the rashi's Hindi name appearing in its subsection name or
- * headline, and to "today" by IST calendar date (these are daily posts).
- * Returns null on any failure, or when nothing matches — the caller falls
- * back to the static mock horoscope text.
+ * matched by the rashi's Hindi name appearing in its own headline (not the
+ * longer synopsis body, which can mention other rashis in passing and
+ * cause false matches), excluding weekly/monthly/yearly roundups, and by
+ * "today" via IST calendar date (these are daily posts). Returns null on
+ * any failure or when nothing matches — the caller falls back to the
+ * static mock horoscope text.
  */
 export async function fetchTodayHoroscope(rashiNameHi: string, now: Date = new Date()): Promise<string | null> {
   try {
@@ -258,8 +262,9 @@ export async function fetchTodayHoroscope(rashiNameHi: string, now: Date = new D
     const todayKey = todayKeyIST(now);
     const match = items.find((item) => {
       if (nbtDateKeyIST(item.dl) !== todayKey) return false;
-      const haystack = `${item.subsecname ?? ""} ${item.hl}`;
-      return haystack.includes(rashiNameHi);
+      const headline = stripTags(item.hl);
+      if (HOROSCOPE_ROUNDUP_RE.test(headline)) return false;
+      return headline.includes(rashiNameHi);
     });
     return match ? shortHoroscopeText(match) : null;
   } catch (err) {
