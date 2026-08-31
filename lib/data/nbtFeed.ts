@@ -3,6 +3,7 @@
 // section msid is fetched per app SectionSlug that has a live equivalent;
 // sarkari-naukri has none, so it stays on the mock FEED_ARTICLES pool.
 import { Article, SectionSlug } from "@/lib/types";
+import { cityLabel } from "@/lib/data/cities";
 
 const NBT_FEED_BASE = "https://global-feed.indiatimes.com/wufs/feed/list/article";
 const NBT_ARTICLE_BASE = "https://navbharattimes.indiatimes.com";
@@ -14,31 +15,28 @@ const SECTION_MSID: Partial<Record<SectionSlug, string>> = {
   rajniti: "2279786", // business — no dedicated politics folder available
 };
 
-// State-news folder — NBT's closest live proxy for "state/city" content.
-// Nothing in the wufs feed (this folder included) carries a per-article
-// city field, so every article pulled from here is tagged with the user's
-// own city rather than left null. Its top item is the always-on lead
-// "hero" card; the rest feed the layout's city slots (4, 7, 9, ...) so
-// they aren't starved down to the handful of city-tagged mock articles.
-const STATE_MSID = "2279808";
-
 interface NbtFeedItem {
   id: string;
   hl: string;
   dl: string; // e.g. "Aug 31, 2026, 11:54 AM"
   seolocation: string;
   imageid?: string;
-  subsecmsid?: number;
 }
 
 interface NbtFeedSection {
   id: string;
+  secname?: string;
 }
 
 interface NbtFeedResponse {
   id?: string; // echoes back the msid that was actually served
   items?: NbtFeedItem[];
-  sections?: NbtFeedSection[]; // the valid subsections under this msid
+  sections?: NbtFeedSection[]; // this folder's direct child folders
+}
+
+interface NbtSection {
+  items: NbtFeedItem[];
+  sections: NbtFeedSection[];
 }
 
 function stripTags(html: string): string {
@@ -74,12 +72,12 @@ function nbtImageUrl(imageid: string): string {
   return `https://static.langimg.com/photo/msid-${imageid}/navbharat-times.jpg`;
 }
 
-function toArticle(item: NbtFeedItem, section: SectionSlug): Article {
+function toArticle(item: NbtFeedItem, section: SectionSlug, city: string | null = null): Article {
   return {
     id: `nbt-${item.id}`,
     headline_hi: stripTags(item.hl),
     section,
-    city: null,
+    city,
     published_at: parseNbtDate(item.dl),
     // NBT's site uses this URL scheme (seolocation + articleshow + id) for
     // both regular articles and photo-gallery items.
@@ -89,32 +87,25 @@ function toArticle(item: NbtFeedItem, section: SectionSlug): Article {
 }
 
 /**
- * Confirms the feed actually served the section we asked for — its own
- * `id` field echoes back the requested msid. This guards against a wrong
- * or stale msid silently returning an unrelated (or default/homepage)
- * feed instead of failing loudly.
- *
- * Deliberately does NOT also require each item's `subsecmsid` to appear in
- * this response's own `sections[]` list: that per-item check was verified
- * only against one section's payload shape (Lifestyle) and NBT's other
- * verticals may structure `sections[]` differently, which would silently
- * empty an otherwise-valid section rather than catch anything wrong. The
- * top-level `id` match is the reliable signal.
+ * Fetches one folder and confirms it actually served the section we asked
+ * for — its own `id` field echoes back the requested msid. This guards
+ * against a wrong or stale msid silently returning an unrelated (or
+ * default/homepage) feed instead of failing loudly.
  */
-function validateSection(data: NbtFeedResponse, expectedMsid: string): NbtFeedItem[] {
-  if (data.id !== expectedMsid) {
-    throw new Error(`NBT feed for msid ${expectedMsid} returned a different section (id=${data.id})`);
-  }
-  return data.items ?? [];
-}
-
-async function fetchNbtItems(msid: string): Promise<NbtFeedItem[]> {
+async function fetchSection(msid: string, revalidateSeconds: number): Promise<NbtSection> {
   const res = await fetch(`${NBT_FEED_BASE}?client=nbt&pc=nbt&dm=t&msid=${msid}`, {
-    next: { revalidate: 300 },
+    next: { revalidate: revalidateSeconds },
   });
   if (!res.ok) throw new Error(`NBT feed ${msid} responded ${res.status}`);
   const data: NbtFeedResponse = await res.json();
-  return validateSection(data, msid);
+  if (data.id !== msid) {
+    throw new Error(`NBT feed for msid ${msid} returned a different section (id=${data.id})`);
+  }
+  return { items: data.items ?? [], sections: data.sections ?? [] };
+}
+
+async function fetchNbtItems(msid: string): Promise<NbtFeedItem[]> {
+  return (await fetchSection(msid, 300)).items;
 }
 
 /**
@@ -137,18 +128,82 @@ export async function fetchLiveArticles(): Promise<Article[]> {
   return results.flat();
 }
 
+// The app's supported cities, mapped to their state's Hindi name. Used only
+// to pick the right branch under the states folder below — the msids
+// themselves are discovered live from each folder's own `sections[]`
+// listing, never hardcoded.
+const CITY_STATE_HI: Partial<Record<string, string>> = {
+  lucknow: "उत्तर प्रदेश",
+  kanpur: "उत्तर प्रदेश",
+  meerut: "उत्तर प्रदेश",
+  agra: "उत्तर प्रदेश",
+  varanasi: "उत्तर प्रदेश",
+  gorakhpur: "उत्तर प्रदेश",
+  patna: "बिहार",
+  indore: "मध्य प्रदेश",
+  bhopal: "मध्य प्रदेश",
+  jaipur: "राजस्थान",
+  ranchi: "झारखंड",
+  nagpur: "महाराष्ट्र",
+  guwahati: "असम",
+  raipur: "छत्तीसगढ़",
+  dehradun: "उत्तराखंड",
+};
+
+const STATES_MSID = "2279808"; // aggregate "states" folder
+const CITY_FRESHNESS_HOURS = 24;
+
+function findChildMsid(sections: NbtFeedSection[], nameHi: string): string | null {
+  const target = nameHi.trim();
+  const exact = sections.find((s) => s.secname?.trim() === target);
+  if (exact) return exact.id;
+  const partial = sections.find((s) => s.secname && (s.secname.includes(target) || target.includes(s.secname)));
+  return partial?.id ?? null;
+}
+
 /**
- * Every article from NBT's state-news folder, tagged with the user's own
- * city (see STATE_MSID above for why). Empty on any fetch/validation
- * failure — callers fall back to mock data for the featured card and rely
- * on whatever city-tagged mock articles exist for the rest of the layout.
+ * Walks NBT's states folder (aggregate) down to the user's specific state,
+ * then their specific city, resolving each msid from the parent folder's
+ * own `sections[]` listing rather than a hardcoded table. If the
+ * city-level folder has nothing, or its freshest article is older than
+ * 24h, falls back to the broader state-level folder instead.
  */
-export async function fetchStateArticles(userCity: string | null): Promise<Article[]> {
+export async function fetchStateArticles(citySlug: string | null): Promise<Article[]> {
+  if (!citySlug) return [];
+  const stateNameHi = CITY_STATE_HI[citySlug];
+  if (!stateNameHi) return [];
+
   try {
-    const items = await fetchNbtItems(STATE_MSID);
-    return items.map((item) => ({ ...toArticle(item, "rajniti"), city: userCity }));
+    const statesLevel = await fetchSection(STATES_MSID, 3600);
+    const stateMsid = findChildMsid(statesLevel.sections, stateNameHi);
+    if (!stateMsid) {
+      console.warn(`NBT states folder has no match for state "${stateNameHi}" (city: ${citySlug})`);
+      return [];
+    }
+
+    const stateLevel = await fetchSection(stateMsid, 3600);
+    const stateArticles = stateLevel.items.map((item) => toArticle(item, "rajniti", citySlug));
+
+    const cityNameHi = cityLabel(citySlug);
+    const cityMsid = cityNameHi ? findChildMsid(stateLevel.sections, cityNameHi) : null;
+    if (!cityMsid) {
+      console.warn(`NBT state folder "${stateNameHi}" has no match for city "${cityNameHi}" — using state-level articles`);
+      return stateArticles;
+    }
+
+    const cityItems = await fetchNbtItems(cityMsid);
+    const cityArticles = cityItems.map((item) => toArticle(item, "rajniti", citySlug));
+    const freshestAgeMs = cityArticles.length
+      ? Date.now() - Math.max(...cityArticles.map((a) => new Date(a.published_at).getTime()))
+      : Infinity;
+
+    if (cityArticles.length > 0 && freshestAgeMs < CITY_FRESHNESS_HOURS * 60 * 60 * 1000) {
+      return cityArticles;
+    }
+    // City folder empty or stale (>24h old) — fall back to the state folder.
+    return stateArticles.length > 0 ? stateArticles : cityArticles;
   } catch (err) {
-    console.error(`Failed to fetch NBT state-news folder (msid ${STATE_MSID}):`, err);
+    console.error(`Failed to resolve NBT city/state articles for "${citySlug}":`, err);
     return [];
   }
 }
