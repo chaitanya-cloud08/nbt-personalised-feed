@@ -1,8 +1,7 @@
 import { redirect } from "next/navigation";
 import { getUserId } from "@/lib/session";
 import { ensureUser, isOnboardingComplete } from "@/lib/db";
-import { FEED_ARTICLES } from "@/lib/data/articles";
-import { scoreAndSortFeed, pickFeaturedCityArticle } from "@/lib/feedScoring";
+import { buildFeed } from "@/lib/feed";
 import { cityLabel } from "@/lib/data/cities";
 import TopAppBar from "@/components/TopAppBar";
 import BottomNav from "@/components/BottomNav";
@@ -18,8 +17,7 @@ export default async function FeedPage() {
     redirect("/onboarding");
   }
 
-  const sorted = scoreAndSortFeed(FEED_ARTICLES, user.city, user.interests);
-  const { featured, rest } = pickFeaturedCityArticle(sorted, user.city);
+  const { featured, rest } = await buildFeed(user);
 
   return (
     <>
