@@ -35,8 +35,9 @@ function rankedInterestSections(interests: UserInterests): SectionSlug[] {
  * Lays out `pool` starting at `startPosition` (2 by default, since slot 1
  * is the featured card) according to the city/interest slot pattern
  * described above. A slot whose target pool is empty falls through to the
- * next best-scored leftover article of any kind, so the feed never has
- * gaps just because e.g. the user's city has no more matching articles.
+ * next best-scored leftover article — preferring one from a *different*
+ * section than whichever was just shown, so a data gap in one or two
+ * sections can't flood several consecutive slots with the same section.
  */
 export function layoutRest(
   pool: Article[],
@@ -56,6 +57,7 @@ export function layoutRest(
   const interestOrder = rankedInterestSections(interests);
   const result: ScoredArticle[] = [];
   let interestCursor = 0;
+  let lastSection: SectionSlug | null = null;
 
   for (let position = startPosition; used.size < scored.length; position++) {
     let next: ScoredArticle | undefined;
@@ -70,8 +72,10 @@ export function layoutRest(
       interestCursor = (interestCursor + 1) % interestOrder.length;
     }
 
-    if (!next) next = take(() => true); // fallback: best remaining article of any kind
+    if (!next) next = take((a) => a.section !== lastSection) ?? take(() => true);
     if (!next) break; // pool exhausted
+
+    lastSection = next.section;
     result.push(next);
   }
 

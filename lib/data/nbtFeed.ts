@@ -86,24 +86,22 @@ function toArticle(item: NbtFeedItem, section: SectionSlug): Article {
 
 /**
  * Confirms the feed actually served the section we asked for — its own
- * `id` field echoes back the requested msid — and drops any item whose
- * subsection isn't one of the ones this response itself lists. This guards
- * against a wrong or stale msid silently returning an unrelated (or
- * default/homepage) feed instead of failing loudly.
+ * `id` field echoes back the requested msid. This guards against a wrong
+ * or stale msid silently returning an unrelated (or default/homepage)
+ * feed instead of failing loudly.
+ *
+ * Deliberately does NOT also require each item's `subsecmsid` to appear in
+ * this response's own `sections[]` list: that per-item check was verified
+ * only against one section's payload shape (Lifestyle) and NBT's other
+ * verticals may structure `sections[]` differently, which would silently
+ * empty an otherwise-valid section rather than catch anything wrong. The
+ * top-level `id` match is the reliable signal.
  */
 function validateSection(data: NbtFeedResponse, expectedMsid: string): NbtFeedItem[] {
   if (data.id !== expectedMsid) {
     throw new Error(`NBT feed for msid ${expectedMsid} returned a different section (id=${data.id})`);
   }
-  const items = data.items ?? [];
-  const validSubsecIds = new Set([expectedMsid, ...(data.sections ?? []).map((s) => s.id)]);
-  const valid = items.filter((item) => validSubsecIds.has(String(item.subsecmsid ?? expectedMsid)));
-  if (valid.length !== items.length) {
-    console.warn(
-      `NBT feed msid ${expectedMsid}: dropped ${items.length - valid.length} item(s) outside this section's own subsections`
-    );
-  }
-  return valid;
+  return data.items ?? [];
 }
 
 async function fetchNbtItems(msid: string): Promise<NbtFeedItem[]> {
