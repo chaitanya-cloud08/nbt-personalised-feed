@@ -9,8 +9,8 @@ import { strings, timeAgoHi } from "@/lib/strings.hi";
 // than a regular ArticleCard to read as the top-of-feed story.
 export default function FeaturedArticleCard({ article }: { article: ScoredArticle }) {
   const city = cityLabel(article.city);
-  return (
-    <article className="mx-4 rounded-lg border border-outline-variant/40 bg-surface-container-lowest overflow-hidden shadow-sm">
+  const content = (
+    <>
       <div className="w-full h-36 bg-primary-container/10 relative flex items-center justify-center">
         <span className="material-symbols-outlined text-primary text-[56px]" aria-hidden="true">
           {SECTION_ICONS[article.section]}
@@ -34,6 +34,19 @@ export default function FeaturedArticleCard({ article }: { article: ScoredArticl
           <span className="text-[11px] text-on-surface-variant">{timeAgoHi(article.published_at)}</span>
         </div>
       </div>
-    </article>
+    </>
   );
+  const className = "mx-4 rounded-lg border border-outline-variant/40 bg-surface-container-lowest overflow-hidden shadow-sm";
+
+  if (article.url) {
+    return (
+      <article className="mx-0">
+        <a href={article.url} target="_blank" rel="noopener noreferrer" className={`block ${className}`}>
+          {content}
+        </a>
+      </article>
+    );
+  }
+
+  return <article className={className}>{content}</article>;
 }

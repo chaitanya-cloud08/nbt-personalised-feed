@@ -5,6 +5,7 @@
 import { Article, SectionSlug } from "@/lib/types";
 
 const NBT_FEED_BASE = "https://global-feed.indiatimes.com/wufs/feed/list/article";
+const NBT_ARTICLE_BASE = "https://navbharattimes.indiatimes.com";
 
 const SECTION_MSID: Partial<Record<SectionSlug, string>> = {
   cricket: "2279790", // sports
@@ -21,6 +22,7 @@ interface NbtFeedItem {
   id: string;
   hl: string;
   dl: string; // e.g. "Aug 31, 2026, 11:54 AM"
+  seolocation: string;
 }
 
 interface NbtFeedResponse {
@@ -61,6 +63,9 @@ function toArticle(item: NbtFeedItem, section: SectionSlug): Article {
     section,
     city: null,
     published_at: parseNbtDate(item.dl),
+    // NBT's site uses this URL scheme (seolocation + articleshow + id) for
+    // both regular articles and photo-gallery items.
+    url: `${NBT_ARTICLE_BASE}/${item.seolocation}/articleshow/${item.id}.cms`,
   };
 }
 

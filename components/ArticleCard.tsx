@@ -6,8 +6,8 @@ import { strings, timeAgoHi } from "@/lib/strings.hi";
 
 export default function ArticleCard({ article }: { article: ScoredArticle }) {
   const city = cityLabel(article.city);
-  return (
-    <article className="flex gap-3 bg-surface-container-lowest p-3 rounded-lg border border-outline-variant/40">
+  const content = (
+    <>
       <div className="w-20 h-20 shrink-0 rounded-md bg-secondary-container flex items-center justify-center">
         <span className="material-symbols-outlined text-primary text-[28px]" aria-hidden="true">
           {SECTION_ICONS[article.section]}
@@ -26,6 +26,19 @@ export default function ArticleCard({ article }: { article: ScoredArticle }) {
           <span className="text-[11px] text-on-surface-variant">{timeAgoHi(article.published_at)}</span>
         </div>
       </div>
-    </article>
+    </>
   );
+  const className = "flex gap-3 bg-surface-container-lowest p-3 rounded-lg border border-outline-variant/40";
+
+  if (article.url) {
+    return (
+      <article>
+        <a href={article.url} target="_blank" rel="noopener noreferrer" className={className}>
+          {content}
+        </a>
+      </article>
+    );
+  }
+
+  return <article className={className}>{content}</article>;
 }
