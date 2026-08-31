@@ -2,8 +2,7 @@
 // (https://global-feed.indiatimes.com/wufs/feed/list/article). One NBT
 // section msid is fetched per app SectionSlug that has a live equivalent;
 // sarkari-naukri has none, so it stays on the mock FEED_ARTICLES pool.
-import { Article, SectionSlug } from "@/lib/types";
-import { cityLabel } from "@/lib/data/cities";
+import { Article, City, SectionSlug } from "@/lib/types";
 
 const NBT_FEED_BASE = "https://global-feed.indiatimes.com/wufs/feed/list/article";
 const NBT_ARTICLE_BASE = "https://navbharattimes.indiatimes.com";
@@ -128,70 +127,80 @@ export async function fetchLiveArticles(): Promise<Article[]> {
   return results.flat();
 }
 
-// The app's supported cities, mapped to their state's Hindi name. Used only
-// to pick the right branch under the states folder below — the msids
-// themselves are discovered live from each folder's own `sections[]`
-// listing, never hardcoded.
-const CITY_STATE_HI: Partial<Record<string, string>> = {
-  lucknow: "उत्तर प्रदेश",
-  kanpur: "उत्तर प्रदेश",
-  meerut: "उत्तर प्रदेश",
-  agra: "उत्तर प्रदेश",
-  varanasi: "उत्तर प्रदेश",
-  gorakhpur: "उत्तर प्रदेश",
-  patna: "बिहार",
-  indore: "मध्य प्रदेश",
-  bhopal: "मध्य प्रदेश",
-  jaipur: "राजस्थान",
-  ranchi: "झारखंड",
-  nagpur: "महाराष्ट्र",
-  guwahati: "असम",
-  raipur: "छत्तीसगढ़",
-  dehradun: "उत्तराखंड",
-};
-
 const STATES_MSID = "2279808"; // aggregate "states" folder
 const CITY_FRESHNESS_HOURS = 24;
 
-function findChildMsid(sections: NbtFeedSection[], nameHi: string): string | null {
-  const target = nameHi.trim();
-  const exact = sections.find((s) => s.secname?.trim() === target);
-  if (exact) return exact.id;
-  const partial = sections.find((s) => s.secname && (s.secname.includes(target) || target.includes(s.secname)));
-  return partial?.id ?? null;
+interface NbtCity {
+  slug: string; // the city's own Hindi name, doubling as its display label
+  stateMsid: string;
+  cityMsid: string;
 }
 
 /**
- * Walks NBT's states folder (aggregate) down to the user's specific state,
- * then their specific city, resolving each msid from the parent folder's
- * own `sections[]` listing rather than a hardcoded table. If the
- * city-level folder has nothing, or its freshest article is older than
- * 24h, falls back to the broader state-level folder instead.
+ * Walks NBT's states folder (aggregate) down through every state to every
+ * city beneath it, in parallel. A city's `slug` is its own Hindi name —
+ * there's no English name to base one on, and using it directly means
+ * every existing `cityLabel()` call site keeps working unchanged (it
+ * already falls back to showing the slug verbatim when not found in the
+ * static city list). A state whose fetch fails is dropped, not fatal.
+ */
+async function fetchStatesWithCities(): Promise<NbtCity[]> {
+  const statesLevel = await fetchSection(STATES_MSID, 3600);
+  const perState = await Promise.all(
+    statesLevel.sections.map(async (state) => {
+      try {
+        const stateLevel = await fetchSection(state.id, 3600);
+        return stateLevel.sections
+          .filter((c): c is NbtFeedSection & { secname: string } => !!c.secname?.trim())
+          .map((c) => ({ slug: c.secname.trim(), stateMsid: state.id, cityMsid: c.id }));
+      } catch (err) {
+        console.error(`Failed to fetch NBT state "${state.secname}" (msid ${state.id}):`, err);
+        return [];
+      }
+    })
+  );
+  return perState.flat();
+}
+
+/**
+ * Every city NBT's state hierarchy actually lists, for the onboarding city
+ * picker. Falls back to an empty list (caller uses the static CITIES pool
+ * instead) on any failure.
+ */
+export async function fetchAllCities(): Promise<City[]> {
+  try {
+    const cities = await fetchStatesWithCities();
+    const seen = new Set<string>();
+    return cities
+      .filter((c) => (seen.has(c.slug) ? false : (seen.add(c.slug), true)))
+      .map(({ slug }) => ({ slug, label_hi: slug }))
+      .sort((a, b) => a.label_hi.localeCompare(b.label_hi, "hi"));
+  } catch (err) {
+    console.error("Failed to fetch NBT city list:", err);
+    return [];
+  }
+}
+
+/**
+ * Finds the user's chosen city within the state hierarchy and returns its
+ * articles. If the city-level folder has nothing, or its freshest article
+ * is older than 24h, falls back to the broader state-level folder instead.
  */
 export async function fetchStateArticles(citySlug: string | null): Promise<Article[]> {
   if (!citySlug) return [];
-  const stateNameHi = CITY_STATE_HI[citySlug];
-  if (!stateNameHi) return [];
 
   try {
-    const statesLevel = await fetchSection(STATES_MSID, 3600);
-    const stateMsid = findChildMsid(statesLevel.sections, stateNameHi);
-    if (!stateMsid) {
-      console.warn(`NBT states folder has no match for state "${stateNameHi}" (city: ${citySlug})`);
+    const cities = await fetchStatesWithCities();
+    const match = cities.find((c) => c.slug === citySlug);
+    if (!match) {
+      console.warn(`No NBT state/city folder found matching "${citySlug}"`);
       return [];
     }
 
-    const stateLevel = await fetchSection(stateMsid, 3600);
+    const stateLevel = await fetchSection(match.stateMsid, 3600);
     const stateArticles = stateLevel.items.map((item) => toArticle(item, "rajniti", citySlug));
 
-    const cityNameHi = cityLabel(citySlug);
-    const cityMsid = cityNameHi ? findChildMsid(stateLevel.sections, cityNameHi) : null;
-    if (!cityMsid) {
-      console.warn(`NBT state folder "${stateNameHi}" has no match for city "${cityNameHi}" — using state-level articles`);
-      return stateArticles;
-    }
-
-    const cityItems = await fetchNbtItems(cityMsid);
+    const cityItems = await fetchNbtItems(match.cityMsid);
     const cityArticles = cityItems.map((item) => toArticle(item, "rajniti", citySlug));
     const freshestAgeMs = cityArticles.length
       ? Date.now() - Math.max(...cityArticles.map((a) => new Date(a.published_at).getTime()))

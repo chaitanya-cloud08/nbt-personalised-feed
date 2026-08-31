@@ -1,18 +1,34 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CITIES } from "@/lib/data/cities";
+import { City } from "@/lib/types";
 import { strings } from "@/lib/strings.hi";
 
 export default function CityStep({ onSelect }: { onSelect: (citySlug: string) => void }) {
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
+  // Seeded with the static list so the picker isn't empty while the live
+  // NBT city list loads; replaced once/if that fetch succeeds.
+  const [cities, setCities] = useState<City[]>(CITIES);
   const s = strings.onboarding.step1;
 
-  const filtered = useMemo(
-    () => CITIES.filter((c) => c.label_hi.includes(query.trim())),
-    [query]
-  );
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/cities")
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancelled && Array.isArray(data.cities) && data.cities.length > 0) {
+          setCities(data.cities);
+        }
+      })
+      .catch(() => {}); // keep the static fallback on failure
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const filtered = useMemo(() => cities.filter((c) => c.label_hi.includes(query.trim())), [cities, query]);
 
   return (
     <div className="flex flex-col gap-4">
