@@ -14,9 +14,13 @@ const SECTION_MSID: Partial<Record<SectionSlug, string>> = {
   rajniti: "2279786", // business — no dedicated politics folder available
 };
 
-// State-news folder, used as the always-on lead "hero" card in place of a
-// city match: the live feed carries no per-article city data.
-const HERO_MSID = "2279808";
+// State-news folder — NBT's closest live proxy for "state/city" content.
+// Nothing in the wufs feed (this folder included) carries a per-article
+// city field, so every article pulled from here is tagged with the user's
+// own city rather than left null. Its top item is the always-on lead
+// "hero" card; the rest feed the layout's city slots (4, 7, 9, ...) so
+// they aren't starved down to the handful of city-tagged mock articles.
+const STATE_MSID = "2279808";
 
 interface NbtFeedItem {
   id: string;
@@ -133,13 +137,18 @@ export async function fetchLiveArticles(): Promise<Article[]> {
   return results.flat();
 }
 
-/** The always-on lead card, sourced from NBT's state-news folder. */
-export async function fetchHeroArticle(): Promise<Article | null> {
+/**
+ * Every article from NBT's state-news folder, tagged with the user's own
+ * city (see STATE_MSID above for why). Empty on any fetch/validation
+ * failure — callers fall back to mock data for the featured card and rely
+ * on whatever city-tagged mock articles exist for the rest of the layout.
+ */
+export async function fetchStateArticles(userCity: string | null): Promise<Article[]> {
   try {
-    const [first] = await fetchNbtItems(HERO_MSID);
-    return first ? toArticle(first, "rajniti") : null;
+    const items = await fetchNbtItems(STATE_MSID);
+    return items.map((item) => ({ ...toArticle(item, "rajniti"), city: userCity }));
   } catch (err) {
-    console.error(`Failed to fetch NBT hero article (msid ${HERO_MSID}):`, err);
-    return null;
+    console.error(`Failed to fetch NBT state-news folder (msid ${STATE_MSID}):`, err);
+    return [];
   }
 }
