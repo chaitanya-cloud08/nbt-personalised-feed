@@ -4,6 +4,7 @@ import { strings } from "@/lib/strings.hi";
 import { getMockLiveMatch } from "@/lib/data/liveMatch";
 import { FESTIVAL_CALENDAR } from "@/lib/data/festivals";
 import { getHoroscopeText } from "@/lib/data/horoscope";
+import { fetchTodayHoroscope } from "@/lib/data/nbtFeed";
 import { RASHIS, rashiLabel } from "@/lib/data/rashi";
 import { WidgetEligible } from "@/lib/types";
 
@@ -35,24 +36,33 @@ export function checkFestival(now: Date = new Date()): WidgetEligible | null {
   return null;
 }
 
-export function checkHoroscope(rashiSlug: string | null, now: Date = new Date()): WidgetEligible | null {
+/**
+ * Prefers today's live, per-rashi horoscope from NBT's astro folder
+ * (see fetchTodayHoroscope); falls back to the static rotating mock text
+ * when there's no live match for today (fetch failure, no matching
+ * headline found, etc.).
+ */
+export async function checkHoroscope(rashiSlug: string | null, now: Date = new Date()): Promise<WidgetEligible | null> {
   if (!rashiSlug) return null;
   const index = RASHIS.findIndex((r) => r.slug === rashiSlug);
   if (index === -1) return null;
+  const label = rashiLabel(rashiSlug) ?? rashiSlug;
+  const liveText = await fetchTodayHoroscope(label, now);
   return {
     type: "horoscope",
     data: {
       rashi: rashiSlug,
-      rashi_label_hi: rashiLabel(rashiSlug) ?? rashiSlug,
-      text_hi: getHoroscopeText(index, now),
+      rashi_label_hi: label,
+      text_hi: liveText ?? getHoroscopeText(index, now),
       date: now.toISOString().slice(0, 10),
     },
   };
 }
 
-/** Ordered by time-sensitivity: live match > festival > horoscope. */
-export function getEligibleWidgets(rashiSlug: string | null, now: Date = new Date()): WidgetEligible[] {
-  return [checkLiveMatch(now), checkFestival(now), checkHoroscope(rashiSlug, now)].filter(
+/** Horoscope leads (the astro widget shown first); live match and festival follow. */
+export async function getEligibleWidgets(rashiSlug: string | null, now: Date = new Date()): Promise<WidgetEligible[]> {
+  const horoscope = await checkHoroscope(rashiSlug, now);
+  return [horoscope, checkLiveMatch(now), checkFestival(now)].filter(
     (w): w is WidgetEligible => w !== null
   );
 }

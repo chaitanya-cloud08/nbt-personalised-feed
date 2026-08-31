@@ -20,6 +20,8 @@ interface NbtFeedItem {
   dl: string; // e.g. "Aug 31, 2026, 11:54 AM"
   seolocation: string;
   imageid?: string;
+  syn?: string; // short synopsis, when present
+  subsecname?: string;
 }
 
 interface NbtFeedSection {
@@ -105,6 +107,22 @@ async function fetchSection(msid: string, revalidateSeconds: number): Promise<Nb
 
 async function fetchNbtItems(msid: string): Promise<NbtFeedItem[]> {
   return (await fetchSection(msid, 300)).items;
+}
+
+/** IST calendar-date key ("YYYY-MM-DD") parsed straight from an NBT
+ * timestamp's own date fields, avoiding a UTC round trip near midnight. */
+function nbtDateKeyIST(dl: string): string | null {
+  const match = NBT_DATE_RE.exec(dl.trim());
+  if (!match) return null;
+  const [, mon, day, year] = match;
+  const monthIndex = NBT_MONTHS.indexOf(mon);
+  if (monthIndex === -1) return null;
+  return `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(Number(day)).padStart(2, "0")}`;
+}
+
+function todayKeyIST(now: Date): string {
+  const ist = new Date(now.getTime() + IST_OFFSET_MS);
+  return `${ist.getUTCFullYear()}-${String(ist.getUTCMonth() + 1).padStart(2, "0")}-${String(ist.getUTCDate()).padStart(2, "0")}`;
 }
 
 /**
@@ -214,5 +232,38 @@ export async function fetchStateArticles(citySlug: string | null): Promise<Artic
   } catch (err) {
     console.error(`Failed to resolve NBT city/state articles for "${citySlug}":`, err);
     return [];
+  }
+}
+
+const ASTRO_MSID = "17127089"; // dharm/astro section — daily per-rashi horoscope posts
+const HOROSCOPE_SNIPPET_LENGTH = 140;
+
+function shortHoroscopeText(item: NbtFeedItem): string {
+  const source = (item.syn?.trim() || stripTags(item.hl)).trim();
+  if (source.length <= HOROSCOPE_SNIPPET_LENGTH) return source;
+  return `${source.slice(0, HOROSCOPE_SNIPPET_LENGTH).trim()}…`;
+}
+
+/**
+ * Today's short-form horoscope for one rashi, sourced live from NBT's
+ * astro folder. The feed has no dedicated rashi field, so an item is
+ * matched by the rashi's Hindi name appearing in its subsection name or
+ * headline, and to "today" by IST calendar date (these are daily posts).
+ * Returns null on any failure, or when nothing matches — the caller falls
+ * back to the static mock horoscope text.
+ */
+export async function fetchTodayHoroscope(rashiNameHi: string, now: Date = new Date()): Promise<string | null> {
+  try {
+    const items = await fetchNbtItems(ASTRO_MSID);
+    const todayKey = todayKeyIST(now);
+    const match = items.find((item) => {
+      if (nbtDateKeyIST(item.dl) !== todayKey) return false;
+      const haystack = `${item.subsecname ?? ""} ${item.hl}`;
+      return haystack.includes(rashiNameHi);
+    });
+    return match ? shortHoroscopeText(match) : null;
+  } catch (err) {
+    console.error(`Failed to fetch NBT astro section (msid ${ASTRO_MSID}) for rashi "${rashiNameHi}":`, err);
+    return null;
   }
 }

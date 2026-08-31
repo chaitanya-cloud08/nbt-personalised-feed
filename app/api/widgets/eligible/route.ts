@@ -6,6 +6,6 @@ import { getEligibleWidgets } from "@/lib/widgets";
 export async function GET() {
   const userId = await getUserId();
   const user = ensureUser(userId);
-  const widgets = getEligibleWidgets(user.rashi);
+  const widgets = await getEligibleWidgets(user.rashi);
   return NextResponse.json({ widgets });
 }
