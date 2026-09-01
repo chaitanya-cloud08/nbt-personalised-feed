@@ -1,14 +1,13 @@
 import { cookies } from "next/headers";
+import { getUserBySession } from "@/lib/auth/sessions";
+import { StoredUser } from "@/lib/db";
 
-export const USER_COOKIE = "nbt_uid";
+export const SESSION_COOKIE = "nbt_session";
 
-/** Reads the simulated-logged-in user's id. Middleware guarantees this cookie exists. */
-export async function getUserId(): Promise<string> {
+/** The logged-in user for this request, or null if not authenticated. */
+export async function getCurrentUser(): Promise<StoredUser | null> {
   const store = await cookies();
-  const id = store.get(USER_COOKIE)?.value;
-  if (!id) {
-    // Should not happen once middleware.ts has run, but fall back safely.
-    return "anonymous";
-  }
-  return id;
+  const sessionId = store.get(SESSION_COOKIE)?.value;
+  if (!sessionId) return null;
+  return getUserBySession(sessionId);
 }

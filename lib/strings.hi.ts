@@ -4,6 +4,20 @@
 export const strings = {
   appName: "नवभारत टाइम्स",
 
+  auth: {
+    loginTitle: "साइन इन करें",
+    registerTitle: "खाता बनाएं",
+    subtitle: "अपनी पसंद की खबरें सहेजने के लिए साइन इन करें।",
+    emailPlaceholder: "ईमेल",
+    passwordPlaceholder: "पासवर्ड (कम से कम 8 अक्षर)",
+    loginButton: "साइन इन करें",
+    registerButton: "खाता बनाएं",
+    switchToRegister: "नया खाता बनाना चाहते हैं? यहाँ क्लिक करें",
+    switchToLogin: "पहले से खाता है? साइन इन करें",
+    genericError: "कुछ गलत हो गया, फिर कोशिश करें",
+    logout: "लॉग आउट",
+  },
+
   onboarding: {
     step1: {
       title: "आपका शहर कौन सा है?",

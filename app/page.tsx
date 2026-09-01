@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
-import { getUserId } from "@/lib/session";
-import { ensureUser, isOnboardingComplete } from "@/lib/db";
+import { getCurrentUser } from "@/lib/session";
+import { isOnboardingComplete } from "@/lib/db";
 import { buildFeed } from "@/lib/feed";
 import { cityLabel } from "@/lib/data/cities";
 import TopAppBar from "@/components/TopAppBar";
@@ -11,8 +11,8 @@ import FeaturedArticleCard from "@/components/FeaturedArticleCard";
 import FeedAutoRefresh from "@/components/FeedAutoRefresh";
 
 export default async function FeedPage() {
-  const userId = await getUserId();
-  const user = ensureUser(userId);
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
 
   if (!isOnboardingComplete(user)) {
     redirect("/onboarding");
