@@ -215,7 +215,17 @@ export async function fetchStateArticles(citySlug: string | null): Promise<Artic
     }
 
     const stateLevel = await fetchSection(match.stateMsid, 3600);
-    const stateArticles = stateLevel.items.map((item) => toArticle(item, "rajniti", citySlug));
+
+    // Sibling cities under the same state, excluding this one — the state
+    // feed naturally mixes in stories specific to *other* cities (e.g.
+    // Gurgaon under Haryana), which must not be tagged with this city just
+    // because we're using the state feed as a fallback.
+    const siblingCityNames = cities
+      .filter((c) => c.stateMsid === match.stateMsid && c.slug !== citySlug)
+      .map((c) => c.slug);
+    const stateArticles = stateLevel.items
+      .filter((item) => !siblingCityNames.some((name) => item.hl.includes(name)))
+      .map((item) => toArticle(item, "rajniti", citySlug));
 
     const cityItems = await fetchNbtItems(match.cityMsid);
     const cityArticles = cityItems.map((item) => toArticle(item, "rajniti", citySlug));
