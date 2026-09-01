@@ -240,8 +240,16 @@ const HOROSCOPE_SNIPPET_LENGTH = 140;
 // otherwise false-positive-match any of them; only daily posts are wanted.
 const HOROSCOPE_ROUNDUP_RE = /weekly|monthly|yearly|साप्ताहिक|मासिक|वार्षिक/i;
 
+// NBT's synopsis text is prefixed with its own English title + date restated
+// (e.g. "Aaj Ka Mesh Rashifal, 1 September 2026 : ..."), before the actual
+// Hindi prediction starts. That boilerplate is always plain ASCII up to a
+// colon, unlike the Devanagari content that follows, so it's safe to strip.
+const HOROSCOPE_PREFIX_RE = /^[A-Za-z0-9,.\s]+:\s*/;
+
 function shortHoroscopeText(item: NbtFeedItem): string {
-  const source = stripTags(item.syn?.trim() || item.hl).trim();
+  const source = stripTags(item.syn?.trim() || item.hl)
+    .trim()
+    .replace(HOROSCOPE_PREFIX_RE, "");
   if (source.length <= HOROSCOPE_SNIPPET_LENGTH) return source;
   return `${source.slice(0, HOROSCOPE_SNIPPET_LENGTH).trim()}…`;
 }
