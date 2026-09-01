@@ -5,13 +5,20 @@ import { getMockLiveMatch } from "@/lib/data/liveMatch";
 import { FESTIVAL_CALENDAR } from "@/lib/data/festivals";
 import { getHoroscopeText } from "@/lib/data/horoscope";
 import { fetchTodayHoroscope } from "@/lib/data/nbtFeed";
+import { fetchLiveCricketMatch } from "@/lib/data/nbtCricket";
 import { RASHIS, rashiLabel } from "@/lib/data/rashi";
 import { WidgetEligible } from "@/lib/types";
 
 const FESTIVAL_WINDOW_DAYS = 5;
 
-export function checkLiveMatch(now: Date = new Date()): WidgetEligible | null {
-  const match = getMockLiveMatch(now);
+/**
+ * Prefers a genuinely live match from NBT's cricket widget feed; falls
+ * back to the static mock match when the live fetch fails (this is the
+ * same fallback convention as checkHoroscope — see there for why).
+ */
+export async function checkLiveMatch(now: Date = new Date()): Promise<WidgetEligible | null> {
+  const live = await fetchLiveCricketMatch();
+  const match = live ?? getMockLiveMatch(now);
   if (!match) return null;
   return { type: "live_match", data: match };
 }
@@ -62,10 +69,8 @@ export async function checkHoroscope(rashiSlug: string | null, now: Date = new D
 
 /** Horoscope leads (the astro widget shown first); live match and festival follow. */
 export async function getEligibleWidgets(rashiSlug: string | null, now: Date = new Date()): Promise<WidgetEligible[]> {
-  const horoscope = await checkHoroscope(rashiSlug, now);
-  return [horoscope, checkLiveMatch(now), checkFestival(now)].filter(
-    (w): w is WidgetEligible => w !== null
-  );
+  const [horoscope, liveMatch] = await Promise.all([checkHoroscope(rashiSlug, now), checkLiveMatch(now)]);
+  return [horoscope, liveMatch, checkFestival(now)].filter((w): w is WidgetEligible => w !== null);
 }
 
 export const festivalCopy = strings.widgets.festival.daysRemaining;
