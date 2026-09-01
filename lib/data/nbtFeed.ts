@@ -235,7 +235,7 @@ export async function fetchStateArticles(citySlug: string | null): Promise<Artic
 }
 
 const ASTRO_MSID = "17127089"; // dharm/astro section — daily per-rashi horoscope posts
-const HOROSCOPE_SNIPPET_LENGTH = 140;
+const HOROSCOPE_SNIPPET_LENGTH = 160;
 // Weekly/monthly/yearly roundups mention several rashis in passing and would
 // otherwise false-positive-match any of them; only daily posts are wanted.
 const HOROSCOPE_ROUNDUP_RE = /weekly|monthly|yearly|साप्ताहिक|मासिक|वार्षिक/i;
@@ -245,13 +245,35 @@ const HOROSCOPE_ROUNDUP_RE = /weekly|monthly|yearly|साप्ताहिक|
 // Hindi prediction starts. That boilerplate is always plain ASCII up to a
 // colon, unlike the Devanagari content that follows, so it's safe to strip.
 const HOROSCOPE_PREFIX_RE = /^[A-Za-z0-9,.\s]+:\s*/;
+const SENTENCE_END_RE = /[।.!?]/;
 
+/**
+ * Cuts at the last full sentence that fits within the length budget, so the
+ * snippet reads as a complete thought instead of stopping mid-sentence.
+ * Falls back to the last whole word + ellipsis only when no sentence ending
+ * falls far enough into the window to leave a substantial snippet.
+ */
 function shortHoroscopeText(item: NbtFeedItem): string {
   const source = stripTags(item.syn?.trim() || item.hl)
     .trim()
     .replace(HOROSCOPE_PREFIX_RE, "");
   if (source.length <= HOROSCOPE_SNIPPET_LENGTH) return source;
-  return `${source.slice(0, HOROSCOPE_SNIPPET_LENGTH).trim()}…`;
+
+  const window = source.slice(0, HOROSCOPE_SNIPPET_LENGTH);
+  let sentenceEnd = -1;
+  for (let i = window.length - 1; i >= 0; i--) {
+    if (SENTENCE_END_RE.test(window[i])) {
+      sentenceEnd = i;
+      break;
+    }
+  }
+  if (sentenceEnd >= window.length * 0.4) {
+    return window.slice(0, sentenceEnd + 1).trim();
+  }
+
+  const lastSpace = window.lastIndexOf(" ");
+  const safeCut = lastSpace > 0 ? lastSpace : window.length;
+  return `${window.slice(0, safeCut).trim()}…`;
 }
 
 function nbtArticleUrl(item: NbtFeedItem): string {
