@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import CityStep from "@/components/onboarding/CityStep";
 import CalibrationStep, { InterestPick } from "@/components/onboarding/CalibrationStep";
@@ -11,7 +10,6 @@ import { strings } from "@/lib/strings.hi";
 type Step = "city" | "interests" | "interests_done" | "rashi";
 
 export default function OnboardingPage() {
-  const router = useRouter();
   const [step, setStep] = useState<Step>("city");
   const s = strings.onboarding.step2;
 
@@ -39,8 +37,13 @@ export default function OnboardingPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ rashi }),
     });
-    router.push("/");
-    router.refresh();
+    // A hard navigation, not router.push: the very first visit to "/"
+    // (before onboarding started) redirected to "/onboarding", and the
+    // client-side Router Cache can replay that stale redirect on a plain
+    // push here since a fetch()-based mutation doesn't invalidate it —
+    // sending the user straight back to onboarding they just finished.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+    window.location.href = "/";
   }
 
   return (
