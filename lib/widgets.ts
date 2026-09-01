@@ -47,14 +47,15 @@ export async function checkHoroscope(rashiSlug: string | null, now: Date = new D
   const index = RASHIS.findIndex((r) => r.slug === rashiSlug);
   if (index === -1) return null;
   const label = rashiLabel(rashiSlug) ?? rashiSlug;
-  const liveText = await fetchTodayHoroscope(label, now);
+  const live = await fetchTodayHoroscope(label, now);
   return {
     type: "horoscope",
     data: {
       rashi: rashiSlug,
       rashi_label_hi: label,
-      text_hi: liveText ?? getHoroscopeText(index, now),
+      text_hi: live?.text ?? getHoroscopeText(index, now),
       date: now.toISOString().slice(0, 10),
+      url: live?.url,
     },
   };
 }

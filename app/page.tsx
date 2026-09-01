@@ -8,6 +8,7 @@ import BottomNav from "@/components/BottomNav";
 import WidgetCarousel from "@/components/widgets/WidgetCarousel";
 import FeedSection from "@/components/FeedSection";
 import FeaturedArticleCard from "@/components/FeaturedArticleCard";
+import FeedAutoRefresh from "@/components/FeedAutoRefresh";
 
 export default async function FeedPage() {
   const userId = await getUserId();
@@ -21,6 +22,7 @@ export default async function FeedPage() {
 
   return (
     <>
+      <FeedAutoRefresh />
       <TopAppBar cityLabel={cityLabel(user.city)} />
       <main className="flex-1 w-full bg-surface-bright pb-6 flex flex-col gap-4">
         <WidgetCarousel />

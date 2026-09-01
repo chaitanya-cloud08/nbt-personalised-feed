@@ -78,4 +78,5 @@ export interface HoroscopeWidgetData {
   rashi_label_hi: string;
   text_hi: string;
   date: string;
+  url?: string; // link to the full article; absent for the static mock text
 }

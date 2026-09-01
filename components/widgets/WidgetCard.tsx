@@ -54,9 +54,9 @@ export default function WidgetCard({ widget }: { widget: WidgetEligible }) {
     );
   }
 
-  const { rashi_label_hi, text_hi } = widget.data;
-  return (
-    <div className="shrink-0 w-64 h-40 rounded-lg p-4 shadow-sm flex flex-col justify-between bg-horoscope-bg border border-horoscope-bg">
+  const { rashi_label_hi, text_hi, url } = widget.data;
+  const horoscopeContent = (
+    <>
       <div className="flex items-center gap-2 border-b border-outline-variant/30 pb-2">
         <span className="material-symbols-outlined text-horoscope-accent text-[20px]" aria-hidden="true">bedtime</span>
         <span className="text-[11px] text-horoscope-accent uppercase tracking-widest font-bold">
@@ -67,6 +67,17 @@ export default function WidgetCard({ widget }: { widget: WidgetEligible }) {
         <h3 className="font-headline text-on-surface mb-1 text-lg leading-tight">{rashi_label_hi}</h3>
         <p className="text-on-surface-variant text-[13px] leading-snug line-clamp-3">{text_hi}</p>
       </div>
-    </div>
+    </>
   );
+  const horoscopeClassName =
+    "shrink-0 w-64 h-40 rounded-lg p-4 shadow-sm flex flex-col justify-between bg-horoscope-bg border border-horoscope-bg";
+
+  if (url) {
+    return (
+      <a href={url} target="_blank" rel="noopener noreferrer" className={horoscopeClassName}>
+        {horoscopeContent}
+      </a>
+    );
+  }
+  return <div className={horoscopeClassName}>{horoscopeContent}</div>;
 }

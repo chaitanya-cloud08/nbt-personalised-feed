@@ -246,17 +246,26 @@ function shortHoroscopeText(item: NbtFeedItem): string {
   return `${source.slice(0, HOROSCOPE_SNIPPET_LENGTH).trim()}…`;
 }
 
+function nbtArticleUrl(item: NbtFeedItem): string {
+  return `${NBT_ARTICLE_BASE}/${item.seolocation}/articleshow/${item.id}.cms`;
+}
+
+export interface TodayHoroscope {
+  text: string;
+  url: string;
+}
+
 /**
  * Today's short-form horoscope for one rashi, sourced live from NBT's
- * astro folder. The feed has no dedicated rashi field, so an item is
- * matched by the rashi's Hindi name appearing in its own headline (not the
- * longer synopsis body, which can mention other rashis in passing and
- * cause false matches), excluding weekly/monthly/yearly roundups, and by
- * "today" via IST calendar date (these are daily posts). Returns null on
- * any failure or when nothing matches — the caller falls back to the
- * static mock horoscope text.
+ * astro folder, plus the link to the full article. The feed has no
+ * dedicated rashi field, so an item is matched by the rashi's Hindi name
+ * appearing in its own headline (not the longer synopsis body, which can
+ * mention other rashis in passing and cause false matches), excluding
+ * weekly/monthly/yearly roundups, and by "today" via IST calendar date
+ * (these are daily posts). Returns null on any failure or when nothing
+ * matches — the caller falls back to the static mock horoscope text.
  */
-export async function fetchTodayHoroscope(rashiNameHi: string, now: Date = new Date()): Promise<string | null> {
+export async function fetchTodayHoroscope(rashiNameHi: string, now: Date = new Date()): Promise<TodayHoroscope | null> {
   try {
     const items = await fetchNbtItems(ASTRO_MSID);
     const todayKey = todayKeyIST(now);
@@ -266,7 +275,7 @@ export async function fetchTodayHoroscope(rashiNameHi: string, now: Date = new D
       if (HOROSCOPE_ROUNDUP_RE.test(headline)) return false;
       return headline.includes(rashiNameHi);
     });
-    return match ? shortHoroscopeText(match) : null;
+    return match ? { text: shortHoroscopeText(match), url: nbtArticleUrl(match) } : null;
   } catch (err) {
     console.error(`Failed to fetch NBT astro section (msid ${ASTRO_MSID}) for rashi "${rashiNameHi}":`, err);
     return null;
