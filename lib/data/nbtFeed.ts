@@ -258,26 +258,36 @@ export interface TodayHoroscope {
 /**
  * Today's short-form horoscope for one rashi, sourced live from NBT's
  * astro folder, plus the link to the full article. The feed has no
- * dedicated rashi field, so an item is matched by the rashi's Hindi name
- * appearing in its own headline (not the longer synopsis body, which can
- * mention other rashis in passing and cause false matches), excluding
- * weekly/monthly/yearly roundups, and by "today" via IST calendar date
- * (these are daily posts). Returns null on any failure or when nothing
- * matches — the caller falls back to the static mock horoscope text.
+ * dedicated rashi field, so an item is matched by rashi name appearing in
+ * its own headline — daily per-rashi posts are titled in transliterated
+ * English (e.g. "Aaj Ka Mesh Rashifal..."), which is exactly this app's
+ * own rashi slug convention, so that's matched case-insensitively; the
+ * Hindi label is also checked in case a headline uses it instead. Only the
+ * headline is checked, not the longer synopsis body, which can mention
+ * other rashis in passing and cause false matches. Roundups
+ * (weekly/monthly/yearly) are excluded, and items are matched to "today"
+ * via IST calendar date (these are daily posts). Returns null on any
+ * failure or when nothing matches — the caller falls back to the static
+ * mock horoscope text.
  */
-export async function fetchTodayHoroscope(rashiNameHi: string, now: Date = new Date()): Promise<TodayHoroscope | null> {
+export async function fetchTodayHoroscope(
+  rashiSlug: string,
+  rashiNameHi: string,
+  now: Date = new Date()
+): Promise<TodayHoroscope | null> {
   try {
     const items = await fetchNbtItems(ASTRO_MSID);
     const todayKey = todayKeyIST(now);
+    const slugLower = rashiSlug.toLowerCase();
     const match = items.find((item) => {
       if (nbtDateKeyIST(item.dl) !== todayKey) return false;
       const headline = stripTags(item.hl);
       if (HOROSCOPE_ROUNDUP_RE.test(headline)) return false;
-      return headline.includes(rashiNameHi);
+      return headline.toLowerCase().includes(slugLower) || headline.includes(rashiNameHi);
     });
     return match ? { text: shortHoroscopeText(match), url: nbtArticleUrl(match) } : null;
   } catch (err) {
-    console.error(`Failed to fetch NBT astro section (msid ${ASTRO_MSID}) for rashi "${rashiNameHi}":`, err);
+    console.error(`Failed to fetch NBT astro section (msid ${ASTRO_MSID}) for rashi "${rashiSlug}":`, err);
     return null;
   }
 }

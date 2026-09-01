@@ -47,7 +47,7 @@ export async function checkHoroscope(rashiSlug: string | null, now: Date = new D
   const index = RASHIS.findIndex((r) => r.slug === rashiSlug);
   if (index === -1) return null;
   const label = rashiLabel(rashiSlug) ?? rashiSlug;
-  const live = await fetchTodayHoroscope(label, now);
+  const live = await fetchTodayHoroscope(rashiSlug, label, now);
   return {
     type: "horoscope",
     data: {
