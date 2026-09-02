@@ -2,9 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/session";
 import { setCity } from "@/lib/db";
 
-// Cities now come from NBT's live state hierarchy (see /api/cities), not a
-// fixed list, so this only sanity-checks the shape rather than matching
-// against a hardcoded set.
+// Cities come from NBT's curated state/city map (lib/data/nbtSectionMap.ts),
+// not a fixed list here, so this only sanity-checks the shape.
 export async function POST(request: NextRequest) {
   const currentUser = await getCurrentUser();
   if (!currentUser) return NextResponse.json({ error: "not authenticated" }, { status: 401 });

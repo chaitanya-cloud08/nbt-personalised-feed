@@ -20,9 +20,12 @@ export const strings = {
 
   onboarding: {
     step1: {
-      title: "आपका शहर कौन सा है?",
-      subtitle: "इससे हम आपके शहर की खबरें आपकी फ़ीड में सबसे ऊपर दिखाएँगे।",
-      searchPlaceholder: "शहर खोजें...",
+      title: "आपका राज्य कौन सा है?",
+      subtitle: "पहले राज्य चुनें, फिर हम आपको उसके शहर दिखाएँगे।",
+      searchPlaceholder: "राज्य खोजें...",
+      cityTitle: "आपका शहर कौन सा है?",
+      citySubtitle: "इससे हम आपके शहर की खबरें आपकी फ़ीड में सबसे ऊपर दिखाएँगे।",
+      citySearchPlaceholder: "शहर खोजें...",
       continue: "आगे बढ़ें",
     },
     step2: {
