@@ -13,6 +13,6 @@ export async function POST(request: NextRequest) {
   if (typeof city !== "string" || city.trim().length === 0 || city.length > 100) {
     return NextResponse.json({ error: "invalid city" }, { status: 400 });
   }
-  const user = setCity(currentUser.email, city);
+  const user = await setCity(currentUser.email, city);
   return NextResponse.json({ ok: true, city: user.city });
 }

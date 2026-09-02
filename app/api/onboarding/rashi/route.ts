@@ -12,6 +12,6 @@ export async function POST(request: NextRequest) {
   if (rashi !== null && (typeof rashi !== "string" || !RASHIS.some((r) => r.slug === rashi))) {
     return NextResponse.json({ error: "invalid rashi" }, { status: 400 });
   }
-  const user = setRashi(currentUser.email, rashi ?? null);
+  const user = await setRashi(currentUser.email, rashi ?? null);
   return NextResponse.json({ ok: true, rashi: user.rashi });
 }

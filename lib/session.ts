@@ -9,5 +9,5 @@ export async function getCurrentUser(): Promise<StoredUser | null> {
   const store = await cookies();
   const sessionId = store.get(SESSION_COOKIE)?.value;
   if (!sessionId) return null;
-  return getUserBySession(sessionId);
+  return await getUserBySession(sessionId);
 }
