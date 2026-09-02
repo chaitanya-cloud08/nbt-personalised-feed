@@ -1,28 +1,28 @@
 import { redirect } from "next/navigation";
-import { getUserId } from "@/lib/session";
-import { ensureUser, isOnboardingComplete } from "@/lib/db";
-import { FEED_ARTICLES } from "@/lib/data/articles";
-import { scoreAndSortFeed, pickFeaturedCityArticle } from "@/lib/feedScoring";
+import { getCurrentUser } from "@/lib/session";
+import { isOnboardingComplete } from "@/lib/db";
+import { buildFeed } from "@/lib/feed";
 import { cityLabel } from "@/lib/data/cities";
 import TopAppBar from "@/components/TopAppBar";
 import BottomNav from "@/components/BottomNav";
 import WidgetCarousel from "@/components/widgets/WidgetCarousel";
 import FeedSection from "@/components/FeedSection";
 import FeaturedArticleCard from "@/components/FeaturedArticleCard";
+import FeedAutoRefresh from "@/components/FeedAutoRefresh";
 
 export default async function FeedPage() {
-  const userId = await getUserId();
-  const user = ensureUser(userId);
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
 
   if (!isOnboardingComplete(user)) {
     redirect("/onboarding");
   }
 
-  const sorted = scoreAndSortFeed(FEED_ARTICLES, user.city, user.interests);
-  const { featured, rest } = pickFeaturedCityArticle(sorted, user.city);
+  const { featured, rest } = await buildFeed(user);
 
   return (
     <>
+      <FeedAutoRefresh />
       <TopAppBar cityLabel={cityLabel(user.city)} />
       <main className="flex-1 w-full bg-surface-bright pb-6 flex flex-col gap-4">
         <WidgetCarousel />

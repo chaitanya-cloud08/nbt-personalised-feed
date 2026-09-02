@@ -1,13 +1,11 @@
 import { NextResponse } from "next/server";
-import { getUserId } from "@/lib/session";
-import { ensureUser } from "@/lib/db";
-import { FEED_ARTICLES } from "@/lib/data/articles";
-import { scoreAndSortFeed, pickFeaturedCityArticle } from "@/lib/feedScoring";
+import { getCurrentUser } from "@/lib/session";
+import { buildFeed } from "@/lib/feed";
 
 export async function GET() {
-  const userId = await getUserId();
-  const user = ensureUser(userId);
-  const sorted = scoreAndSortFeed(FEED_ARTICLES, user.city, user.interests);
-  const { featured, rest } = pickFeaturedCityArticle(sorted, user.city);
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: "not authenticated" }, { status: 401 });
+
+  const { featured, rest } = await buildFeed(user);
   return NextResponse.json({ featured, feed: rest });
 }

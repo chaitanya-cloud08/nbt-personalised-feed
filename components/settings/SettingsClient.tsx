@@ -16,9 +16,11 @@ type Panel = "none" | "city" | "rashi" | "recalibrate" | "recalibrate_done";
 export default function SettingsClient({
   initialCity,
   initialRashi,
+  email,
 }: {
   initialCity: string | null;
   initialRashi: string | null;
+  email: string;
 }) {
   const router = useRouter();
   const [city, setCity] = useState(initialCity);
@@ -26,6 +28,15 @@ export default function SettingsClient({
   const [panel, setPanel] = useState<Panel>("none");
   const [recalCards, setRecalCards] = useState<CalibrationCard[]>([]);
   const s = strings.settings;
+  const authStrings = strings.auth;
+
+  async function handleLogout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    // Hard navigation for the same reason as elsewhere: a plain
+    // router.push can replay a stale pre-logout Router Cache entry.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+    window.location.href = "/login";
+  }
 
   async function saveCity(slug: string) {
     await fetch("/api/onboarding/city", {
@@ -113,6 +124,16 @@ export default function SettingsClient({
                 className="mt-2 self-start rounded-lg bg-primary text-on-primary text-sm font-medium px-4 py-2"
               >
                 {s.recalibrate}
+              </button>
+            </div>
+
+            <div className="rounded-xl border border-outline-variant/40 bg-surface-container-lowest p-4 flex items-center justify-between">
+              <p className="text-sm text-on-surface-variant truncate">{email}</p>
+              <button
+                onClick={handleLogout}
+                className="text-sm font-medium text-error hover:opacity-80 shrink-0"
+              >
+                {authStrings.logout}
               </button>
             </div>
           </div>

@@ -4,11 +4,28 @@
 export const strings = {
   appName: "नवभारत टाइम्स",
 
+  auth: {
+    loginTitle: "साइन इन करें",
+    registerTitle: "खाता बनाएं",
+    subtitle: "अपनी पसंद की खबरें सहेजने के लिए साइन इन करें।",
+    emailPlaceholder: "ईमेल",
+    passwordPlaceholder: "पासवर्ड (कम से कम 8 अक्षर)",
+    loginButton: "साइन इन करें",
+    registerButton: "खाता बनाएं",
+    switchToRegister: "नया खाता बनाना चाहते हैं? यहाँ क्लिक करें",
+    switchToLogin: "पहले से खाता है? साइन इन करें",
+    genericError: "कुछ गलत हो गया, फिर कोशिश करें",
+    logout: "लॉग आउट",
+  },
+
   onboarding: {
     step1: {
-      title: "आपका शहर कौन सा है?",
-      subtitle: "इससे हम आपके शहर की खबरें आपकी फ़ीड में सबसे ऊपर दिखाएँगे।",
-      searchPlaceholder: "शहर खोजें...",
+      title: "आपका राज्य कौन सा है?",
+      subtitle: "पहले राज्य चुनें, फिर हम आपको उसके शहर दिखाएँगे।",
+      searchPlaceholder: "राज्य खोजें...",
+      cityTitle: "आपका शहर कौन सा है?",
+      citySubtitle: "इससे हम आपके शहर की खबरें आपकी फ़ीड में सबसे ऊपर दिखाएँगे।",
+      citySearchPlaceholder: "शहर खोजें...",
       continue: "आगे बढ़ें",
     },
     step2: {
@@ -34,6 +51,15 @@ export const strings = {
     empty: "अभी कोई खबर उपलब्ध नहीं है।",
     nationalTag: "राष्ट्रीय",
     cityBadge: "आपके शहर की खबर",
+    regionalBadge: "राज्य/शहर",
+    resetInterests: {
+      title: "क्या आपकी फ़ीड सही लग रही है?",
+      subtitle: "कुछ खबरें देखकर अपनी पसंद फिर से सेट करें।",
+      button: "पसंद फिर से सेट करें",
+      calibrationTitle: "आपकी पसंद बताइए",
+      calibrationSubtitle: "इन खबरों को देखकर बताएं कि आपको ऐसी खबरें पसंद हैं या नहीं।",
+      saving: "सहेजा जा रहा है...",
+    },
   },
 
   widgets: {
@@ -61,14 +87,6 @@ export const strings = {
     backToFeed: "फ़ीड पर वापस जाएं",
     saved: "सहेजा गया",
   },
-
-  sections: {
-    "sarkari-naukri": "सरकारी नौकरी",
-    cricket: "क्रिकेट",
-    bollywood: "बॉलीवुड",
-    "dharm-tyohar": "धर्म/त्योहार",
-    rajniti: "राजनीति",
-  } as Record<string, string>,
 
   common: {
     loading: "लोड हो रहा है...",

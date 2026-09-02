@@ -9,12 +9,18 @@ import { strings, timeAgoHi } from "@/lib/strings.hi";
 // than a regular ArticleCard to read as the top-of-feed story.
 export default function FeaturedArticleCard({ article }: { article: ScoredArticle }) {
   const city = cityLabel(article.city);
-  return (
-    <article className="mx-4 rounded-lg border border-outline-variant/40 bg-surface-container-lowest overflow-hidden shadow-sm">
+  const content = (
+    <>
       <div className="w-full h-36 bg-primary-container/10 relative flex items-center justify-center">
         <span className="material-symbols-outlined text-primary text-[56px]" aria-hidden="true">
           {SECTION_ICONS[article.section]}
         </span>
+        {article.thumbnail_url && (
+          <div
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: `url(${article.thumbnail_url})` }}
+          />
+        )}
         {city && (
           <span className="absolute top-2 left-2 bg-primary text-on-primary px-2 py-1 rounded text-[11px] font-bold uppercase tracking-wider">
             {strings.feed.cityBadge}
@@ -27,13 +33,26 @@ export default function FeaturedArticleCard({ article }: { article: ScoredArticl
         </h2>
         <div className="flex items-center gap-2 mt-2 flex-wrap">
           <span className="text-[10px] font-semibold border border-outline text-on-surface-variant px-2 py-0.5 rounded uppercase tracking-wide">
-            {sectionLabel(article.section)}
+            {article.city ? strings.feed.regionalBadge : sectionLabel(article.section)}
           </span>
           <span className="text-[11px] text-on-surface-variant">{city ?? strings.feed.nationalTag}</span>
           <span className="text-[11px] text-on-surface-variant">·</span>
           <span className="text-[11px] text-on-surface-variant">{timeAgoHi(article.published_at)}</span>
         </div>
       </div>
-    </article>
+    </>
   );
+  const className = "mx-4 rounded-lg border border-outline-variant/40 bg-surface-container-lowest overflow-hidden shadow-sm";
+
+  if (article.url) {
+    return (
+      <article className="mx-0">
+        <a href={article.url} target="_blank" rel="noopener noreferrer" className={`block ${className}`}>
+          {content}
+        </a>
+      </article>
+    );
+  }
+
+  return <article className={className}>{content}</article>;
 }

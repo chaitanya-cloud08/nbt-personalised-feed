@@ -1,11 +1,12 @@
 import { Section } from "@/lib/types";
 
 export const SECTIONS: Section[] = [
-  { slug: "sarkari-naukri", label_hi: "सरकारी नौकरी" },
+  { slug: "business", label_hi: "बिजनेस" },
+  { slug: "entertainment", label_hi: "मनोरंजन" },
   { slug: "cricket", label_hi: "क्रिकेट" },
-  { slug: "bollywood", label_hi: "बॉलीवुड" },
-  { slug: "dharm-tyohar", label_hi: "धर्म/त्योहार" },
-  { slug: "rajniti", label_hi: "राजनीति" },
+  { slug: "lifestyle", label_hi: "लाइफस्टाइल" },
+  { slug: "india", label_hi: "भारत" },
+  { slug: "world", label_hi: "दुनिया" },
 ];
 
 export function sectionLabel(slug: string): string {

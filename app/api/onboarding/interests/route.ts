@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getUserId } from "@/lib/session";
+import { getCurrentUser } from "@/lib/session";
 import { addInterestScores } from "@/lib/db";
 import { SECTIONS } from "@/lib/data/sections";
 
@@ -11,6 +11,9 @@ interface InterestInput {
 // Also used by the recalibration flow (Part 2) — scores accumulate across
 // onboarding and any later recalibration rounds, they are not overwritten.
 export async function POST(request: NextRequest) {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) return NextResponse.json({ error: "not authenticated" }, { status: 401 });
+
   const body = await request.json().catch(() => null);
   const interests: InterestInput[] | undefined = body?.interests;
   if (!Array.isArray(interests) || interests.length === 0) {
@@ -25,7 +28,6 @@ export async function POST(request: NextRequest) {
     deltas[item.section] = (deltas[item.section] ?? 0) + (item.liked ? 1 : -1);
   }
 
-  const userId = await getUserId();
-  const user = addInterestScores(userId, deltas);
+  const user = addInterestScores(currentUser.email, deltas);
   return NextResponse.json({ ok: true, interests: user.interests });
 }

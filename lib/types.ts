@@ -1,9 +1,10 @@
 export type SectionSlug =
-  | "sarkari-naukri"
+  | "business"
+  | "entertainment"
   | "cricket"
-  | "bollywood"
-  | "dharm-tyohar"
-  | "rajniti";
+  | "lifestyle"
+  | "india"
+  | "world";
 
 export interface Section {
   slug: SectionSlug;
@@ -26,6 +27,8 @@ export interface Article {
   section: SectionSlug;
   city: string | null; // null = national news
   published_at: string; // ISO timestamp
+  url?: string; // link to the source article; absent for mock/demo articles
+  thumbnail_url?: string; // article image; absent for mock/demo articles
 }
 
 export interface ScoredArticle extends Article {
@@ -50,6 +53,7 @@ export interface UserRecord {
 export interface CalibrationCard {
   section: SectionSlug;
   headline_hi: string;
+  url?: string; // link to the source article; absent for mock/demo cards
 }
 
 export type WidgetEligible =
@@ -76,4 +80,5 @@ export interface HoroscopeWidgetData {
   rashi_label_hi: string;
   text_hi: string;
   date: string;
+  url?: string; // link to the full article; absent for the static mock text
 }

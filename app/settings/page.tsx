@@ -1,12 +1,10 @@
-import { getUserId } from "@/lib/session";
-import { ensureUser } from "@/lib/db";
+import { redirect } from "next/navigation";
+import { getCurrentUser } from "@/lib/session";
 import SettingsClient from "@/components/settings/SettingsClient";
 
 export default async function SettingsPage() {
-  const userId = await getUserId();
-  const user = ensureUser(userId);
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
 
-  return (
-    <SettingsClient initialCity={user.city} initialRashi={user.rashi} />
-  );
+  return <SettingsClient initialCity={user.city} initialRashi={user.rashi} email={user.email} />;
 }
