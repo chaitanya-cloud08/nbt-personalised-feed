@@ -53,6 +53,7 @@ export interface UserRecord {
 export interface CalibrationCard {
   section: SectionSlug;
   headline_hi: string;
+  url?: string; // link to the source article; absent for mock/demo cards
 }
 
 export type WidgetEligible =

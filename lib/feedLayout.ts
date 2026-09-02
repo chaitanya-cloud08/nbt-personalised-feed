@@ -1,23 +1,12 @@
 // Positional feed layout: instead of pure score order, the feed below the
-// featured/hero card (which already occupies slot 1) follows a fixed
-// pattern — city/state articles pinned at slots 4, 7, 9 of every following
-// 9-slot block, with every other slot cycling through the user's own
-// ranked interests (highest interest score first). Nothing about which
-// articles fill those slots is hardcoded — only the slot positions are.
+// featured/hero card (which already occupies position 1, itself a city
+// article) follows a repeating pattern — one city slot, then one slot for
+// each section the user has shown interest in, then city again, and so on.
+// Nothing about which articles fill those slots is hardcoded — only the
+// slot positions are.
 import { Article, ScoredArticle, SectionSlug, UserInterests } from "@/lib/types";
 import { scoreAndSortFeed } from "@/lib/feedScoring";
 import { SECTIONS } from "@/lib/data/sections";
-
-// 1-indexed positions within each repeating block that are reserved for a
-// city/state-matched article. Position 1 of the very first block is the
-// featured/hero card, handled separately by the caller.
-const CITY_SLOT_POSITIONS = new Set([1, 4, 7, 9]);
-const BLOCK_SIZE = 9;
-
-function isCitySlot(position: number): boolean {
-  const relative = ((position - 1) % BLOCK_SIZE) + 1;
-  return CITY_SLOT_POSITIONS.has(relative);
-}
 
 /**
  * Sections the user has actually shown net-positive interest in, ranked
@@ -33,11 +22,12 @@ function rankedInterestSections(interests: UserInterests): SectionSlug[] {
 
 /**
  * Lays out `pool` starting at `startPosition` (2 by default, since slot 1
- * is the featured card) according to the city/interest slot pattern
- * described above. A slot whose target pool is empty falls through to the
- * next best-scored leftover article — preferring one from a *different*
- * section than whichever was just shown, so a data gap in one or two
- * sections can't flood several consecutive slots with the same section.
+ * is the featured card) as a repeating block of one city slot followed by
+ * one slot per section the user likes: city, interest 1, interest 2, ...,
+ * city, repeat. A slot whose target pool is empty falls through to the next
+ * best-scored leftover article — preferring one from a *different* section
+ * than whichever was just shown, so a data gap in one or two sections can't
+ * flood several consecutive slots with the same section.
  */
 export function layoutRest(
   pool: Article[],
@@ -55,21 +45,26 @@ export function layoutRest(
   };
 
   const interestOrder = rankedInterestSections(interests);
+  // Block = 1 city slot + one slot per section the user likes, so the
+  // pattern is: city, interest 1, interest 2, ..., city, repeat.
+  const blockSize = interestOrder.length + 1;
   const result: ScoredArticle[] = [];
-  let interestCursor = 0;
   let lastSection: SectionSlug | null = null;
 
   for (let position = startPosition; used.size < scored.length; position++) {
+    const relative = (position - 1) % blockSize;
     let next: ScoredArticle | undefined;
 
-    if (userCity && isCitySlot(position)) {
-      next = take((a) => a.city === userCity);
-    } else if (interestOrder.length > 0) {
-      for (let i = 0; i < interestOrder.length && !next; i++) {
-        const section = interestOrder[(interestCursor + i) % interestOrder.length];
-        next = take((a) => a.section === section);
+    if (relative === 0) {
+      if (userCity) next = take((a) => a.city === userCity);
+    } else {
+      const assignedSection = interestOrder[relative - 1];
+      next = take((a) => a.section === assignedSection);
+      // That section's pool is exhausted — try the rest of the user's
+      // liked sections before falling through to the generic fallback.
+      for (let i = 0; !next && i < interestOrder.length; i++) {
+        next = take((a) => a.section === interestOrder[i]);
       }
-      interestCursor = (interestCursor + 1) % interestOrder.length;
     }
 
     if (!next) next = take((a) => a.section !== lastSection) ?? take(() => true);

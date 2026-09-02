@@ -7,7 +7,7 @@ import FeedResetCard from "@/components/FeedResetCard";
 // After this many articles, an inline "reset your interests" prompt is
 // shown once (see FeedResetCard) so recalibrating doesn't require leaving
 // the feed.
-const RESET_CARD_AFTER = 8;
+const RESET_CARD_AFTER = 5;
 
 export default function FeedSection({ feed }: { feed: ScoredArticle[] }) {
   return (

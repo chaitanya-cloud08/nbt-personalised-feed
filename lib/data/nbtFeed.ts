@@ -148,12 +148,25 @@ export async function fetchLiveArticles(): Promise<Article[]> {
   return results.flat();
 }
 
+/** Fisher-Yates shuffle, returning a new array — the calibration cards are
+ * re-ordered on every call so the questions don't always appear in the same
+ * fixed section order. */
+function shuffled<T>(items: T[]): T[] {
+  const result = [...items];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
 /**
  * The single most recent article from each interest section, for the
  * onboarding/recalibration calibration cards. A section whose live fetch
  * fails, or returns nothing, falls back to its static CALIBRATION_ARTICLES
  * entry — callers always get exactly one card per section, live where
- * possible.
+ * possible. Each live card links to its real NBT article; the returned
+ * order is randomized on every call.
  */
 export async function getCalibrationCards(): Promise<CalibrationCard[]> {
   const entries = Object.entries(SECTION_MSID) as [SectionSlug, string][];
@@ -165,7 +178,7 @@ export async function getCalibrationCards(): Promise<CalibrationCard[]> {
         // Compare parsed ISO timestamps, not raw `dl` strings — those start
         // with an English month name, which doesn't sort chronologically.
         const latest = items.reduce((a, b) => (parseNbtDate(b.dl) > parseNbtDate(a.dl) ? b : a));
-        return { section, headline_hi: stripTags(latest.hl) };
+        return { section, headline_hi: stripTags(latest.hl), url: nbtArticleUrl(latest) };
       } catch (err) {
         console.error(`Failed to fetch latest "${section}" article for calibration (msid ${msid}):`, err);
         return null;
@@ -173,7 +186,8 @@ export async function getCalibrationCards(): Promise<CalibrationCard[]> {
     })
   );
   const liveBySection = new Map(live.filter((c): c is CalibrationCard => c !== null).map((c) => [c.section, c]));
-  return CALIBRATION_ARTICLES.map((fallback) => liveBySection.get(fallback.section) ?? fallback);
+  const cards = CALIBRATION_ARTICLES.map((fallback) => liveBySection.get(fallback.section) ?? fallback);
+  return shuffled(cards);
 }
 
 const CITY_FRESHNESS_HOURS = 24;

@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-const REFRESH_INTERVAL_MS = 15 * 60 * 1000;
+const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 
 // The feed page is server-rendered from a single buildFeed() call, so
 // there's nothing for a visitor to naturally trigger a re-fetch. This just

@@ -49,14 +49,25 @@ export default function CalibrationStep({
       </div>
 
       <div className="rounded-xl border border-outline-variant bg-surface-container-lowest shadow-sm p-6 flex flex-col gap-4 min-h-48 justify-between">
-        <div>
-          <span className="inline-block rounded-full bg-primary-container/10 text-primary text-sm px-3 py-1 font-medium">
-            {sectionLabel(card.section)}
-          </span>
-          <p className="font-headline text-lg font-semibold mt-3 leading-relaxed text-on-surface">
-            {card.headline_hi}
-          </p>
-        </div>
+        {card.url ? (
+          <a href={card.url} target="_blank" rel="noopener noreferrer" className="block">
+            <span className="inline-block rounded-full bg-primary-container/10 text-primary text-sm px-3 py-1 font-medium">
+              {sectionLabel(card.section)}
+            </span>
+            <p className="font-headline text-lg font-semibold mt-3 leading-relaxed text-on-surface hover:underline">
+              {card.headline_hi}
+            </p>
+          </a>
+        ) : (
+          <div>
+            <span className="inline-block rounded-full bg-primary-container/10 text-primary text-sm px-3 py-1 font-medium">
+              {sectionLabel(card.section)}
+            </span>
+            <p className="font-headline text-lg font-semibold mt-3 leading-relaxed text-on-surface">
+              {card.headline_hi}
+            </p>
+          </div>
+        )}
 
         <div className="flex gap-3">
           <button

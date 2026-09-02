@@ -51,6 +51,7 @@ export const strings = {
     empty: "अभी कोई खबर उपलब्ध नहीं है।",
     nationalTag: "राष्ट्रीय",
     cityBadge: "आपके शहर की खबर",
+    regionalBadge: "राज्य/शहर",
     resetInterests: {
       title: "क्या आपकी फ़ीड सही लग रही है?",
       subtitle: "कुछ खबरें देखकर अपनी पसंद फिर से सेट करें।",

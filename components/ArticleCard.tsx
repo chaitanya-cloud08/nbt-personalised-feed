@@ -25,7 +25,7 @@ export default function ArticleCard({ article }: { article: ScoredArticle }) {
         </h3>
         <div className="flex items-center gap-2 mt-2 flex-wrap">
           <span className="text-[10px] font-semibold bg-secondary-container text-on-secondary-container px-2 py-0.5 rounded uppercase tracking-wide">
-            {sectionLabel(article.section)}
+            {article.city ? strings.feed.regionalBadge : sectionLabel(article.section)}
           </span>
           <span className="text-[11px] text-on-surface-variant">{city ?? strings.feed.nationalTag}</span>
           <span className="text-[11px] text-on-surface-variant">·</span>
