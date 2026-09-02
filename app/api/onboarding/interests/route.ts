@@ -28,6 +28,6 @@ export async function POST(request: NextRequest) {
     deltas[item.section] = (deltas[item.section] ?? 0) + (item.liked ? 1 : -1);
   }
 
-  const user = addInterestScores(currentUser.email, deltas);
+  const user = await addInterestScores(currentUser.email, deltas);
   return NextResponse.json({ ok: true, interests: user.interests });
 }

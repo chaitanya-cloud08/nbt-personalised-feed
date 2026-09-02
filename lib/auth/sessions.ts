@@ -1,24 +1,27 @@
-// In-memory session store — deliberately NOT persisted to disk. Losing
-// sessions on a server restart just means logging back in; it doesn't lose
-// any account data, which lives in lib/db.ts's persisted store.
+// Session store — persisted to Postgres (see lib/db.ts for why). A plain
+// in-memory Map worked under `next dev` but broke on Vercel: each API route
+// is its own serverless function, and different invocations — even of the
+// *same* route seconds apart — are not guaranteed to share a process, so a
+// session created by the login route was often invisible to the very next
+// request that tried to read it.
+import { sql, ensureSchema } from "@/lib/pg";
 import { StoredUser, getUserByEmail } from "@/lib/db";
 
-const globalForSessions = globalThis as unknown as { __nbtSessions?: Map<string, string> };
-const sessions = globalForSessions.__nbtSessions ?? new Map<string, string>(); // sessionId -> email
-globalForSessions.__nbtSessions = sessions;
-
-export function createSession(email: string): string {
+export async function createSession(email: string): Promise<string> {
+  await ensureSchema();
   const sessionId = crypto.randomUUID();
-  sessions.set(sessionId, email);
+  await sql`INSERT INTO sessions (id, email) VALUES (${sessionId}, ${email.toLowerCase().trim()})`;
   return sessionId;
 }
 
-export function destroySession(sessionId: string): void {
-  sessions.delete(sessionId);
+export async function destroySession(sessionId: string): Promise<void> {
+  await ensureSchema();
+  await sql`DELETE FROM sessions WHERE id = ${sessionId}`;
 }
 
-export function getUserBySession(sessionId: string): StoredUser | null {
-  const email = sessions.get(sessionId);
-  if (!email) return null;
-  return getUserByEmail(email) ?? null;
+export async function getUserBySession(sessionId: string): Promise<StoredUser | null> {
+  await ensureSchema();
+  const rows = (await sql`SELECT email FROM sessions WHERE id = ${sessionId}`) as { email: string }[];
+  if (!rows[0]) return null;
+  return (await getUserByEmail(rows[0].email)) ?? null;
 }

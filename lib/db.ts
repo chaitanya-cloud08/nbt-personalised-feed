@@ -1,12 +1,12 @@
 // Persisted user "database" standing in for a real users/user_interests
-// table (see the Part 4 schema in the spec) — keyed by email, backed by a
-// JSON file on disk so accounts and preferences survive server restarts.
-// That's the whole point of real accounts over the old anonymous cookie:
-// without persistence, an "account" would be no better than the cookie it
-// replaced.
-import fs from "fs";
-import path from "path";
-import { UserRecord } from "@/lib/types";
+// table (see the Part 4 schema in the spec) — backed by Postgres (Neon, via
+// Vercel Postgres) so accounts and preferences survive both server restarts
+// and, critically, Vercel's serverless functions each running in their own
+// isolated container with no shared memory or writable disk between them.
+// A prior file-on-disk + in-memory version worked fine under `next dev`'s
+// single long-running process but silently lost every account once deployed.
+import { sql, ensureSchema } from "@/lib/pg";
+import { UserInterests, UserRecord } from "@/lib/types";
 
 export interface StoredUser extends UserRecord {
   email: string;
@@ -14,95 +14,103 @@ export interface StoredUser extends UserRecord {
   passwordSalt: string;
 }
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const DATA_FILE = path.join(DATA_DIR, "users.json");
-
-function loadFromDisk(): Map<string, StoredUser> {
-  try {
-    const raw = fs.readFileSync(DATA_FILE, "utf-8");
-    const parsed: StoredUser[] = JSON.parse(raw);
-    return new Map(parsed.map((u) => [u.email, u]));
-  } catch {
-    return new Map();
-  }
+interface UserRow {
+  email: string;
+  password_hash: string;
+  password_salt: string;
+  city: string | null;
+  rashi: string | null;
+  interests: UserInterests;
+  onboarding_city_done: boolean;
+  onboarding_interests_done: boolean;
+  onboarding_rashi_done: boolean;
+  created_at: string;
 }
 
-// Survive Next.js dev-server hot reload by attaching the store to
-// globalThis; the disk file is what survives an actual process restart.
-const globalForDb = globalThis as unknown as { __nbtUsers?: Map<string, StoredUser> };
-const users = globalForDb.__nbtUsers ?? loadFromDisk();
-globalForDb.__nbtUsers = users;
-
-function persist(): void {
-  try {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-    fs.writeFileSync(DATA_FILE, JSON.stringify(Array.from(users.values()), null, 2), "utf-8");
-  } catch (err) {
-    console.error("Failed to persist user store:", err);
-  }
+function fromRow(row: UserRow): StoredUser {
+  return {
+    id: row.email,
+    email: row.email,
+    passwordHash: row.password_hash,
+    passwordSalt: row.password_salt,
+    city: row.city,
+    rashi: row.rashi,
+    interests: row.interests,
+    onboarding_city_done: row.onboarding_city_done,
+    onboarding_interests_done: row.onboarding_interests_done,
+    onboarding_rashi_done: row.onboarding_rashi_done,
+    created_at: row.created_at,
+  };
 }
 
 function normalizeEmail(email: string): string {
   return email.toLowerCase().trim();
 }
 
-export function getUserByEmail(email: string): StoredUser | undefined {
-  return users.get(normalizeEmail(email));
+export async function getUserByEmail(email: string): Promise<StoredUser | undefined> {
+  await ensureSchema();
+  const rows = (await sql`SELECT * FROM users WHERE email = ${normalizeEmail(email)}`) as UserRow[];
+  return rows[0] ? fromRow(rows[0]) : undefined;
 }
 
-export function createUser(email: string, passwordHash: string, passwordSalt: string): StoredUser {
+export async function createUser(email: string, passwordHash: string, passwordSalt: string): Promise<StoredUser> {
+  await ensureSchema();
   const normalized = normalizeEmail(email);
-  const user: StoredUser = {
-    id: normalized,
-    email: normalized,
-    passwordHash,
-    passwordSalt,
-    city: null,
-    rashi: null,
-    interests: {},
-    onboarding_city_done: false,
-    onboarding_interests_done: false,
-    onboarding_rashi_done: false,
-    created_at: new Date().toISOString(),
-  };
-  users.set(normalized, user);
-  persist();
-  return user;
+  const rows = (await sql`
+    INSERT INTO users (email, password_hash, password_salt)
+    VALUES (${normalized}, ${passwordHash}, ${passwordSalt})
+    RETURNING *
+  `) as UserRow[];
+  return fromRow(rows[0]);
 }
 
 /** Every mutator below assumes the caller already resolved a valid session
  * to this email — a missing account at this point is a bug, not a user
  * error, so this throws rather than silently creating one. */
-function requireUser(email: string): StoredUser {
-  const user = users.get(normalizeEmail(email));
-  if (!user) throw new Error(`No account for email ${email}`);
-  return user;
+function requireRow(rows: UserRow[], email: string): UserRow {
+  if (!rows[0]) throw new Error(`No account for email ${email}`);
+  return rows[0];
 }
 
-export function setCity(email: string, city: string): StoredUser {
-  const user = requireUser(email);
-  user.city = city;
-  user.onboarding_city_done = true;
-  persist();
-  return user;
+export async function setCity(email: string, city: string): Promise<StoredUser> {
+  await ensureSchema();
+  const normalized = normalizeEmail(email);
+  const rows = (await sql`
+    UPDATE users SET city = ${city}, onboarding_city_done = true
+    WHERE email = ${normalized}
+    RETURNING *
+  `) as UserRow[];
+  return fromRow(requireRow(rows, normalized));
 }
 
-export function addInterestScores(email: string, deltas: Record<string, number>): StoredUser {
-  const user = requireUser(email);
+export async function addInterestScores(email: string, deltas: Record<string, number>): Promise<StoredUser> {
+  await ensureSchema();
+  const normalized = normalizeEmail(email);
+  const current = await getUserByEmail(normalized);
+  if (!current) throw new Error(`No account for email ${normalized}`);
+
+  const interests: UserInterests = { ...current.interests };
   for (const [section, delta] of Object.entries(deltas)) {
-    user.interests[section] = (user.interests[section] ?? 0) + delta;
+    interests[section] = (interests[section] ?? 0) + delta;
   }
-  user.onboarding_interests_done = true;
-  persist();
-  return user;
+
+  const rows = (await sql`
+    UPDATE users SET interests = ${JSON.stringify(interests)}::jsonb, onboarding_interests_done = true
+    WHERE email = ${normalized}
+    RETURNING *
+  `) as UserRow[];
+  return fromRow(requireRow(rows, normalized));
 }
 
-export function setRashi(email: string, rashi: string | null): StoredUser {
-  const user = requireUser(email);
-  user.rashi = rashi;
-  user.onboarding_rashi_done = true;
-  persist();
-  return user;
+export async function setRashi(email: string, rashi: string | null): Promise<StoredUser> {
+  await ensureSchema();
+  const normalized = normalizeEmail(email);
+  const rows = (await sql`
+    UPDATE users SET rashi = ${rashi}, onboarding_rashi_done = true
+    WHERE email = ${normalized}
+    RETURNING *
+  `) as UserRow[];
+  return fromRow(requireRow(rows, normalized));
 }
 
 export function isOnboardingComplete(user: UserRecord): boolean {

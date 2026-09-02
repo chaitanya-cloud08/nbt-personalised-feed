@@ -18,13 +18,13 @@ export async function POST(request: NextRequest) {
   if (password.length < MIN_PASSWORD_LENGTH) {
     return NextResponse.json({ error: "पासवर्ड कम से कम 8 अक्षर का होना चाहिए" }, { status: 400 });
   }
-  if (getUserByEmail(email)) {
+  if (await getUserByEmail(email)) {
     return NextResponse.json({ error: "इस ईमेल से पहले से खाता मौजूद है" }, { status: 409 });
   }
 
   const { hash, salt } = hashPassword(password);
-  const user = createUser(email, hash, salt);
-  const sessionId = createSession(user.email);
+  const user = await createUser(email, hash, salt);
+  const sessionId = await createSession(user.email);
 
   const response = NextResponse.json({ ok: true });
   response.cookies.set(SESSION_COOKIE, sessionId, {
