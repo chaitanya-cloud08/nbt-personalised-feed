@@ -1,6 +1,13 @@
+import { Fragment } from "react";
 import { ScoredArticle } from "@/lib/types";
 import { strings } from "@/lib/strings.hi";
 import ArticleCard from "@/components/ArticleCard";
+import FeedResetCard from "@/components/FeedResetCard";
+
+// After this many articles, an inline "reset your interests" prompt is
+// shown once (see FeedResetCard) so recalibrating doesn't require leaving
+// the feed.
+const RESET_CARD_AFTER = 8;
 
 export default function FeedSection({ feed }: { feed: ScoredArticle[] }) {
   return (
@@ -11,7 +18,12 @@ export default function FeedSection({ feed }: { feed: ScoredArticle[] }) {
       {feed.length === 0 ? (
         <p className="text-on-surface-variant">{strings.feed.empty}</p>
       ) : (
-        feed.map((article) => <ArticleCard key={article.id} article={article} />)
+        feed.map((article, index) => (
+          <Fragment key={article.id}>
+            <ArticleCard article={article} />
+            {index === RESET_CARD_AFTER - 1 && <FeedResetCard />}
+          </Fragment>
+        ))
       )}
     </section>
   );

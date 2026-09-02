@@ -51,6 +51,14 @@ export const strings = {
     empty: "अभी कोई खबर उपलब्ध नहीं है।",
     nationalTag: "राष्ट्रीय",
     cityBadge: "आपके शहर की खबर",
+    resetInterests: {
+      title: "क्या आपकी फ़ीड सही लग रही है?",
+      subtitle: "कुछ खबरें देखकर अपनी पसंद फिर से सेट करें।",
+      button: "पसंद फिर से सेट करें",
+      calibrationTitle: "आपकी पसंद बताइए",
+      calibrationSubtitle: "इन खबरों को देखकर बताएं कि आपको ऐसी खबरें पसंद हैं या नहीं।",
+      saving: "सहेजा जा रहा है...",
+    },
   },
 
   widgets: {
@@ -78,14 +86,6 @@ export const strings = {
     backToFeed: "फ़ीड पर वापस जाएं",
     saved: "सहेजा गया",
   },
-
-  sections: {
-    "sarkari-naukri": "सरकारी नौकरी",
-    cricket: "क्रिकेट",
-    bollywood: "बॉलीवुड",
-    "dharm-tyohar": "धर्म/त्योहार",
-    rajniti: "राजनीति",
-  } as Record<string, string>,
 
   common: {
     loading: "लोड हो रहा है...",

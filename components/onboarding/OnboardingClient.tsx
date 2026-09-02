@@ -4,12 +4,12 @@ import { useState } from "react";
 import CityStep from "@/components/onboarding/CityStep";
 import CalibrationStep, { InterestPick } from "@/components/onboarding/CalibrationStep";
 import RashiStep from "@/components/onboarding/RashiStep";
-import { CALIBRATION_ARTICLES } from "@/lib/data/articles";
+import { CalibrationCard } from "@/lib/types";
 import { strings } from "@/lib/strings.hi";
 
 type Step = "city" | "interests" | "interests_done" | "rashi";
 
-export default function OnboardingClient() {
+export default function OnboardingClient({ calibrationCards }: { calibrationCards: CalibrationCard[] }) {
   const [step, setStep] = useState<Step>("city");
   const s = strings.onboarding.step2;
 
@@ -52,7 +52,7 @@ export default function OnboardingClient() {
         {step === "city" && <CityStep onSelect={handleCity} />}
 
         {step === "interests" && (
-          <CalibrationStep cards={CALIBRATION_ARTICLES} onComplete={handleInterests} />
+          <CalibrationStep cards={calibrationCards} onComplete={handleInterests} />
         )}
 
         {step === "interests_done" && (

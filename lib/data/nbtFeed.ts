@@ -1,18 +1,21 @@
 // Live article source: Navbharat Times' public "wufs" feed
 // (https://global-feed.indiatimes.com/wufs/feed/list/article). One NBT
-// section msid is fetched per app SectionSlug that has a live equivalent;
-// sarkari-naukri has none, so it stays on the mock FEED_ARTICLES pool.
-import { Article, SectionSlug } from "@/lib/types";
+// section msid is fetched per app SectionSlug — all 6 have a real live
+// source (see lib/data/nbtSectionMap.ts for the full curated msid table).
+import { Article, CalibrationCard, SectionSlug } from "@/lib/types";
 import { findPickerCity } from "@/lib/data/nbtSectionMap";
+import { CALIBRATION_ARTICLES } from "@/lib/data/articles";
 
 const NBT_FEED_BASE = "https://global-feed.indiatimes.com/wufs/feed/list/article";
 const NBT_ARTICLE_BASE = "https://navbharattimes.indiatimes.com";
 
 const SECTION_MSID: Partial<Record<SectionSlug, string>> = {
-  cricket: "2279790", // sports
-  bollywood: "2279793", // entertainment
-  "dharm-tyohar": "17127056", // dharm
-  rajniti: "2279786", // business — no dedicated politics folder available
+  business: "2279786",
+  entertainment: "2279793",
+  cricket: "3521869", // sports/cricket specifically, not the broader sports msid
+  lifestyle: "2354729",
+  india: "1564454",
+  world: "2279801",
 };
 
 interface NbtFeedItem {
@@ -145,6 +148,34 @@ export async function fetchLiveArticles(): Promise<Article[]> {
   return results.flat();
 }
 
+/**
+ * The single most recent article from each interest section, for the
+ * onboarding/recalibration calibration cards. A section whose live fetch
+ * fails, or returns nothing, falls back to its static CALIBRATION_ARTICLES
+ * entry — callers always get exactly one card per section, live where
+ * possible.
+ */
+export async function getCalibrationCards(): Promise<CalibrationCard[]> {
+  const entries = Object.entries(SECTION_MSID) as [SectionSlug, string][];
+  const live = await Promise.all(
+    entries.map(async ([section, msid]): Promise<CalibrationCard | null> => {
+      try {
+        const items = await fetchNbtItems(msid);
+        if (items.length === 0) return null;
+        // Compare parsed ISO timestamps, not raw `dl` strings — those start
+        // with an English month name, which doesn't sort chronologically.
+        const latest = items.reduce((a, b) => (parseNbtDate(b.dl) > parseNbtDate(a.dl) ? b : a));
+        return { section, headline_hi: stripTags(latest.hl) };
+      } catch (err) {
+        console.error(`Failed to fetch latest "${section}" article for calibration (msid ${msid}):`, err);
+        return null;
+      }
+    })
+  );
+  const liveBySection = new Map(live.filter((c): c is CalibrationCard => c !== null).map((c) => [c.section, c]));
+  return CALIBRATION_ARTICLES.map((fallback) => liveBySection.get(fallback.section) ?? fallback);
+}
+
 const CITY_FRESHNESS_HOURS = 24;
 
 /**
@@ -166,10 +197,10 @@ export async function fetchStateArticles(citySlug: string | null): Promise<Artic
     }
 
     const stateLevel = await fetchSection(match.stateMsid, 3600);
-    const stateArticles = stateLevel.items.map((item) => toArticle(item, "rajniti", citySlug));
+    const stateArticles = stateLevel.items.map((item) => toArticle(item, "india", citySlug));
 
     const cityItems = await fetchNbtItems(match.msid);
-    const cityArticles = cityItems.map((item) => toArticle(item, "rajniti", citySlug));
+    const cityArticles = cityItems.map((item) => toArticle(item, "india", citySlug));
     const freshestAgeMs = cityArticles.length
       ? Date.now() - Math.max(...cityArticles.map((a) => new Date(a.published_at).getTime()))
       : Infinity;

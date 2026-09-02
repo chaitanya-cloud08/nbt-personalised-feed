@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/session";
 import { isOnboardingComplete } from "@/lib/db";
+import { getCalibrationCards } from "@/lib/data/nbtFeed";
 import OnboardingClient from "@/components/onboarding/OnboardingClient";
 
 export default async function OnboardingPage() {
@@ -8,5 +9,6 @@ export default async function OnboardingPage() {
   if (!user) redirect("/login");
   if (isOnboardingComplete(user)) redirect("/");
 
-  return <OnboardingClient />;
+  const calibrationCards = await getCalibrationCards();
+  return <OnboardingClient calibrationCards={calibrationCards} />;
 }

@@ -1,9 +1,10 @@
 export type SectionSlug =
-  | "sarkari-naukri"
+  | "business"
+  | "entertainment"
   | "cricket"
-  | "bollywood"
-  | "dharm-tyohar"
-  | "rajniti";
+  | "lifestyle"
+  | "india"
+  | "world";
 
 export interface Section {
   slug: SectionSlug;
