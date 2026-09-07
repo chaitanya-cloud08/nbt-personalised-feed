@@ -25,11 +25,6 @@ export default async function FeedPage() {
       <FeedAutoRefresh />
       <TopAppBar cityLabel={cityLabel(user.city)} />
       <main className="flex-1 w-full bg-surface-bright pb-6 flex flex-col gap-4">
-        {/* TEMP DEBUG — remove once the reset-card issue is diagnosed */}
-        <p className="px-4 text-[11px] text-error break-all">
-          DEBUG hasFeatured={String(!!featured)} restLen={rest.length}{" "}
-          uniqueIds={new Set(rest.map((a) => a.id)).size} featuredId={featured?.id ?? "null"}
-        </p>
         <WidgetCarousel />
         {featured && <FeaturedArticleCard article={featured} />}
         <FeedSection feed={rest} hasFeatured={!!featured} />
