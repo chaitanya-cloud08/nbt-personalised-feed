@@ -2,13 +2,9 @@
 // inspirational note, shown on the /festival/[tag] page a widget click leads
 // to. Generated once per festival via Groq and cached in Postgres (see
 // lib/pg.ts), since the content doesn't change between visitors or visits.
-import Groq from "groq-sdk";
 import { z } from "zod";
 import { sql, ensureSchema } from "@/lib/pg";
-
-// llama-3.3-70b-versatile was deprecated by Groq; this is their current
-// recommended general-purpose/reasoning model.
-const GROQ_MODEL = "openai/gpt-oss-120b";
+import { getGroqClient, GROQ_MODEL } from "@/lib/groq";
 
 const FestivalContentSchema = z.object({
   summary_hi: z
@@ -55,16 +51,8 @@ export interface FestivalContentResult {
   error?: string;
 }
 
-let client: Groq | null = null;
-
-function getClient(): Groq | null {
-  if (!process.env.GROQ_API_KEY) return null;
-  if (!client) client = new Groq();
-  return client;
-}
-
 async function generateFestivalContent(nameHi: string, dateISO: string): Promise<FestivalContentResult> {
-  const groq = getClient();
+  const groq = getGroqClient();
   if (!groq) return { content: null, error: "GROQ_API_KEY is not set in this deployment's environment." };
 
   try {

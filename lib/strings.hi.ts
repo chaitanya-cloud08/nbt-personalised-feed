@@ -90,6 +90,7 @@ export const strings = {
       resume: "जारी रखें",
       stop: "बंद करें",
       playing: "चल रहा है...",
+      loading: "सारांश तैयार हो रहा है...",
       morningGreeting: "सुप्रभात",
       afternoonGreeting: "नमस्ते",
       eveningGreeting: "शुभ संध्या",
