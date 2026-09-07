@@ -15,12 +15,22 @@ let client: NeonQueryFunction<false, false> | null = null;
 
 function getClient(): NeonQueryFunction<false, false> {
   if (!client) {
-    const connectionString = process.env.DATABASE_URL ?? process.env.POSTGRES_URL;
+    // Different Vercel storage integrations (native Postgres vs. the Neon
+    // marketplace integration it now redirects to) have named this env var
+    // differently over time — check every variant either has used.
+    const connectionString =
+      process.env.DATABASE_URL ??
+      process.env.POSTGRES_URL ??
+      process.env.DATABASE_URL_UNPOOLED ??
+      process.env.POSTGRES_URL_NON_POOLING ??
+      process.env.POSTGRES_PRISMA_URL;
     if (!connectionString) {
       throw new Error(
-        "No Postgres connection string found (DATABASE_URL or POSTGRES_URL). " +
+        "No Postgres connection string found (checked DATABASE_URL, POSTGRES_URL, " +
+          "DATABASE_URL_UNPOOLED, POSTGRES_URL_NON_POOLING, POSTGRES_PRISMA_URL). " +
           "Add a Postgres/Neon database to this project in the Vercel dashboard, " +
-          "then run `vercel env pull .env.local` to get it locally."
+          "confirm it's enabled for the Production environment, and redeploy " +
+          "(adding an env var does not affect deployments that already exist)."
       );
     }
     client = neon(connectionString);

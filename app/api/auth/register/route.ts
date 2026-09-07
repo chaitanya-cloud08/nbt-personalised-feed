@@ -18,20 +18,32 @@ export async function POST(request: NextRequest) {
   if (password.length < MIN_PASSWORD_LENGTH) {
     return NextResponse.json({ error: "पासवर्ड कम से कम 8 अक्षर का होना चाहिए" }, { status: 400 });
   }
-  if (await getUserByEmail(email)) {
-    return NextResponse.json({ error: "इस ईमेल से पहले से खाता मौजूद है" }, { status: 409 });
+  try {
+    if (await getUserByEmail(email)) {
+      return NextResponse.json({ error: "इस ईमेल से पहले से खाता मौजूद है" }, { status: 409 });
+    }
+
+    const { hash, salt } = hashPassword(password);
+    const user = await createUser(email, hash, salt);
+    const sessionId = await createSession(user.email);
+
+    const response = NextResponse.json({ ok: true });
+    response.cookies.set(SESSION_COOKIE, sessionId, {
+      httpOnly: true,
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 365,
+      path: "/",
+    });
+    return response;
+  } catch (err) {
+    // Surfaced directly in the response (not just server logs) so a
+    // deployment-environment issue — e.g. a missing/misnamed Postgres env
+    // var — is visible from the browser's network tab without needing
+    // platform log access.
+    console.error("Registration failed:", err);
+    return NextResponse.json(
+      { error: "server error", detail: err instanceof Error ? err.message : String(err) },
+      { status: 500 }
+    );
   }
-
-  const { hash, salt } = hashPassword(password);
-  const user = await createUser(email, hash, salt);
-  const sessionId = await createSession(user.email);
-
-  const response = NextResponse.json({ ok: true });
-  response.cookies.set(SESSION_COOKIE, sessionId, {
-    httpOnly: true,
-    sameSite: "lax",
-    maxAge: 60 * 60 * 24 * 365,
-    path: "/",
-  });
-  return response;
 }
