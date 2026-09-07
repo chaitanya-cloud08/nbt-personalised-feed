@@ -9,7 +9,12 @@ import FeedResetCard from "@/components/FeedResetCard";
 // the feed.
 const RESET_CARD_AFTER = 5;
 
-export default function FeedSection({ feed }: { feed: ScoredArticle[] }) {
+export default function FeedSection({ feed, hasFeatured = false }: { feed: ScoredArticle[]; hasFeatured?: boolean }) {
+  // The featured/hero card above this section (if any) is visually the
+  // feed's first article, so it counts toward RESET_CARD_AFTER too — without
+  // this offset, "after 5 articles" would actually land after the 6th.
+  const triggerIndex = RESET_CARD_AFTER - 1 - (hasFeatured ? 1 : 0);
+
   return (
     <section className="px-4 flex flex-col gap-3">
       <h2 className="text-[13px] font-semibold text-on-surface-variant uppercase tracking-wide">
@@ -21,7 +26,7 @@ export default function FeedSection({ feed }: { feed: ScoredArticle[] }) {
         feed.map((article, index) => (
           <Fragment key={article.id}>
             <ArticleCard article={article} />
-            {index === RESET_CARD_AFTER - 1 && <FeedResetCard />}
+            {index === triggerIndex && <FeedResetCard />}
           </Fragment>
         ))
       )}
