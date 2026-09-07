@@ -13,23 +13,35 @@ import { neon, NeonQueryFunction } from "@neondatabase/serverless";
 // the production build itself whenever the env var isn't set at build time.
 let client: NeonQueryFunction<false, false> | null = null;
 
+// Neon's Vercel integration prefixes every env var it creates with the
+// project's own name (e.g. "nbtpersonalised_DATABASE_URL_UNPOOLED"), not a
+// fixed name — so instead of guessing exact names, scan for any key ending
+// in one of these, preferring a pooled connection string when both exist.
+const CONNECTION_STRING_SUFFIXES = [
+  "DATABASE_URL",
+  "POSTGRES_URL",
+  "DATABASE_URL_UNPOOLED",
+  "POSTGRES_URL_NON_POOLING",
+  "POSTGRES_PRISMA_URL",
+];
+
+function findConnectionString(): string | undefined {
+  for (const suffix of CONNECTION_STRING_SUFFIXES) {
+    const key = Object.keys(process.env).find((k) => k === suffix || k.endsWith(`_${suffix}`));
+    if (key && process.env[key]) return process.env[key];
+  }
+  return undefined;
+}
+
 function getClient(): NeonQueryFunction<false, false> {
   if (!client) {
-    // Different Vercel storage integrations (native Postgres vs. the Neon
-    // marketplace integration it now redirects to) have named this env var
-    // differently over time — check every variant either has used.
-    const connectionString =
-      process.env.DATABASE_URL ??
-      process.env.POSTGRES_URL ??
-      process.env.DATABASE_URL_UNPOOLED ??
-      process.env.POSTGRES_URL_NON_POOLING ??
-      process.env.POSTGRES_PRISMA_URL;
+    const connectionString = findConnectionString();
     if (!connectionString) {
       throw new Error(
-        "No Postgres connection string found (checked DATABASE_URL, POSTGRES_URL, " +
-          "DATABASE_URL_UNPOOLED, POSTGRES_URL_NON_POOLING, POSTGRES_PRISMA_URL). " +
+        `No Postgres connection string found among env vars (checked names ending in ` +
+          `${CONNECTION_STRING_SUFFIXES.join(", ")}, with or without a project-name prefix). ` +
           "Add a Postgres/Neon database to this project in the Vercel dashboard, " +
-          "confirm it's enabled for the Production environment, and redeploy " +
+          "confirm it's enabled for the environment you're testing, and redeploy " +
           "(adding an env var does not affect deployments that already exist)."
       );
     }
