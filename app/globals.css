@@ -45,6 +45,8 @@
   --color-festival-accent: #c2410c;
   --color-horoscope-bg: #f3e8ff;
   --color-horoscope-accent: #6b21a8;
+  --color-brief-bg: #ecfdf5;
+  --color-brief-accent: #047857;
 }
 
 @theme inline {
@@ -92,6 +94,8 @@
   --color-festival-accent: var(--color-festival-accent);
   --color-horoscope-bg: var(--color-horoscope-bg);
   --color-horoscope-accent: var(--color-horoscope-accent);
+  --color-brief-bg: var(--color-brief-bg);
+  --color-brief-accent: var(--color-brief-accent);
 }
 
 body {
