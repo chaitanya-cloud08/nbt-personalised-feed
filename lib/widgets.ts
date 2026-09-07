@@ -9,7 +9,7 @@ import { fetchLiveCricketMatch } from "@/lib/data/nbtCricket";
 import { RASHIS, rashiLabel } from "@/lib/data/rashi";
 import { WidgetEligible } from "@/lib/types";
 
-const FESTIVAL_WINDOW_DAYS = 5;
+const FESTIVAL_WINDOW_DAYS = 10;
 
 /**
  * Prefers a genuinely live match from NBT's cricket widget feed; falls
