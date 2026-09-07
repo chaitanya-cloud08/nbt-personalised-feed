@@ -1,11 +1,12 @@
 // AI-generated festival detail content — summary, significance, tips, and an
 // inspirational note, shown on the /festival/[tag] page a widget click leads
-// to. Generated once per festival via Claude and cached in Postgres (see
+// to. Generated once per festival via Groq and cached in Postgres (see
 // lib/pg.ts), since the content doesn't change between visitors or visits.
-import Anthropic from "@anthropic-ai/sdk";
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
+import Groq from "groq-sdk";
 import { z } from "zod";
 import { sql, ensureSchema } from "@/lib/pg";
+
+const GROQ_MODEL = "llama-3.3-70b-versatile";
 
 const FestivalContentSchema = z.object({
   summary_hi: z
@@ -28,34 +29,58 @@ const FestivalContentSchema = z.object({
 
 export type FestivalContent = z.infer<typeof FestivalContentSchema>;
 
-let client: Anthropic | null = null;
+// Groq's Structured Outputs JSON schema — hand-written to mirror
+// FestivalContentSchema above; the Zod schema is what actually validates the
+// parsed response (defense in depth against the model not honoring it).
+const FESTIVAL_CONTENT_JSON_SCHEMA = {
+  type: "object",
+  properties: {
+    summary_hi: { type: "string" },
+    significance_hi: { type: "string" },
+    tips_hi: { type: "array", items: { type: "string" }, minItems: 3, maxItems: 6 },
+    inspiration_hi: { type: "string" },
+  },
+  required: ["summary_hi", "significance_hi", "tips_hi", "inspiration_hi"],
+  additionalProperties: false,
+};
 
-function getClient(): Anthropic | null {
-  if (!process.env.ANTHROPIC_API_KEY) return null;
-  if (!client) client = new Anthropic();
+let client: Groq | null = null;
+
+function getClient(): Groq | null {
+  if (!process.env.GROQ_API_KEY) return null;
+  if (!client) client = new Groq();
   return client;
 }
 
-/** Returns null when ANTHROPIC_API_KEY isn't configured, or on any API failure — the page falls back to just the calendar facts in that case. */
+/** Returns null when GROQ_API_KEY isn't configured, the response fails schema validation, or on any API failure — the page falls back to just the calendar facts in that case. */
 async function generateFestivalContent(nameHi: string, dateISO: string): Promise<FestivalContent | null> {
-  const anthropic = getClient();
-  if (!anthropic) return null;
+  const groq = getClient();
+  if (!groq) return null;
 
   try {
-    const response = await anthropic.messages.parse({
-      model: "claude-opus-5",
-      max_tokens: 2048,
-      system:
-        "आप भारतीय त्योहारों, उनके इतिहास और परंपराओं के विशेषज्ञ हैं। हमेशा स्पष्ट, गर्मजोशी भरी और सटीक हिंदी में जवाब दें।",
+    const completion = await groq.chat.completions.create({
+      model: GROQ_MODEL,
       messages: [
+        {
+          role: "system",
+          content:
+            "आप भारतीय त्योहारों, उनके इतिहास और परंपराओं के विशेषज्ञ हैं। हमेशा स्पष्ट, गर्मजोशी भरी और सटीक हिंदी में जवाब दें।",
+        },
         {
           role: "user",
           content: `त्योहार: ${nameHi}\nतारीख: ${dateISO}\n\nइस त्योहार के बारे में जानकारी दीजिए।`,
         },
       ],
-      output_config: { format: zodOutputFormat(FestivalContentSchema) },
+      response_format: {
+        type: "json_schema",
+        json_schema: { name: "festival_content", schema: FESTIVAL_CONTENT_JSON_SCHEMA, strict: true },
+      },
     });
-    return response.parsed_output;
+
+    const raw = completion.choices[0]?.message?.content;
+    if (!raw) return null;
+    const parsed = FestivalContentSchema.safeParse(JSON.parse(raw));
+    return parsed.success ? parsed.data : null;
   } catch (err) {
     console.error(`Failed to generate AI content for festival "${nameHi}":`, err);
     return null;
