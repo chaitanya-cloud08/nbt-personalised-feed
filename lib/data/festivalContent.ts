@@ -6,7 +6,9 @@ import Groq from "groq-sdk";
 import { z } from "zod";
 import { sql, ensureSchema } from "@/lib/pg";
 
-const GROQ_MODEL = "llama-3.3-70b-versatile";
+// llama-3.3-70b-versatile was deprecated by Groq; this is their current
+// recommended general-purpose/reasoning model.
+const GROQ_MODEL = "openai/gpt-oss-120b";
 
 const FestivalContentSchema = z.object({
   summary_hi: z
