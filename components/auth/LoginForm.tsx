@@ -31,7 +31,10 @@ export default function LoginForm() {
     }
     if (!res.ok) {
       const data = await res.json().catch(() => null);
-      setError(data?.error ?? s.genericError);
+      // `detail` is a raw server-error message (e.g. a missing Postgres env
+      // var on this deployment) — surfaced here too since checking devtools
+      // isn't always convenient while testing on a phone/preview URL.
+      setError(data?.detail ? `${data.error}: ${data.detail}` : (data?.error ?? s.genericError));
       setSubmitting(false);
       return;
     }
