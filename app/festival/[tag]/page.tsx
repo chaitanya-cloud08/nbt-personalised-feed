@@ -9,7 +9,7 @@ export default async function FestivalPage({ params }: PageProps<"/festival/[tag
   const festival = FESTIVAL_CALENDAR.find((f) => f.tag === tag);
   if (!festival) notFound();
 
-  const content = await getFestivalContent(festival.tag, festival.name_hi, festival.date);
+  const { content, error } = await getFestivalContent(festival.tag, festival.name_hi, festival.date);
   const s = strings.widgets.festivalPage;
 
   return (
@@ -39,9 +39,10 @@ export default async function FestivalPage({ params }: PageProps<"/festival/[tag
 
       <div className="px-4 flex flex-col gap-5 mt-6">
         {!content && (
-          <p className="text-on-surface-variant text-center py-6 rounded-lg border border-outline-variant/40 bg-surface-container-lowest">
-            {s.unavailable}
-          </p>
+          <div className="flex flex-col gap-2 py-6 rounded-lg border border-outline-variant/40 bg-surface-container-lowest px-4">
+            <p className="text-on-surface-variant text-center">{s.unavailable}</p>
+            {error && <p className="text-error text-xs text-center break-words">{error}</p>}
+          </div>
         )}
 
         {content && (
