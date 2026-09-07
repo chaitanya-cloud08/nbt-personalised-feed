@@ -44,6 +44,15 @@ const FESTIVAL_CONTENT_JSON_SCHEMA = {
   additionalProperties: false,
 };
 
+export interface FestivalContentResult {
+  content: FestivalContent | null;
+  // Surfaced directly on the page (not just server logs) so a deployment-
+  // environment issue — a missing key, a retired model, a schema mismatch —
+  // is visible without pulling platform logs. See app/api/auth/login for
+  // the same pattern applied to a different silent-500 problem.
+  error?: string;
+}
+
 let client: Groq | null = null;
 
 function getClient(): Groq | null {
@@ -52,10 +61,9 @@ function getClient(): Groq | null {
   return client;
 }
 
-/** Returns null when GROQ_API_KEY isn't configured, the response fails schema validation, or on any API failure — the page falls back to just the calendar facts in that case. */
-async function generateFestivalContent(nameHi: string, dateISO: string): Promise<FestivalContent | null> {
+async function generateFestivalContent(nameHi: string, dateISO: string): Promise<FestivalContentResult> {
   const groq = getClient();
-  if (!groq) return null;
+  if (!groq) return { content: null, error: "GROQ_API_KEY is not set in this deployment's environment." };
 
   try {
     const completion = await groq.chat.completions.create({
@@ -78,12 +86,17 @@ async function generateFestivalContent(nameHi: string, dateISO: string): Promise
     });
 
     const raw = completion.choices[0]?.message?.content;
-    if (!raw) return null;
+    if (!raw) return { content: null, error: "Groq returned an empty response." };
+
     const parsed = FestivalContentSchema.safeParse(JSON.parse(raw));
-    return parsed.success ? parsed.data : null;
+    if (!parsed.success) {
+      return { content: null, error: `Response failed schema validation: ${parsed.error.message}` };
+    }
+    return { content: parsed.data };
   } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
     console.error(`Failed to generate AI content for festival "${nameHi}":`, err);
-    return null;
+    return { content: null, error: message };
   }
 }
 
@@ -92,18 +105,18 @@ interface FestivalContentRow {
 }
 
 /** Cached in Postgres, keyed by tag — generated once, reused by every later visitor. */
-export async function getFestivalContent(tag: string, nameHi: string, dateISO: string): Promise<FestivalContent | null> {
+export async function getFestivalContent(tag: string, nameHi: string, dateISO: string): Promise<FestivalContentResult> {
   await ensureSchema();
 
   const rows = (await sql`SELECT content FROM festival_content WHERE tag = ${tag}`) as FestivalContentRow[];
-  if (rows[0]) return rows[0].content;
+  if (rows[0]) return { content: rows[0].content };
 
-  const generated = await generateFestivalContent(nameHi, dateISO);
-  if (!generated) return null;
+  const result = await generateFestivalContent(nameHi, dateISO);
+  if (!result.content) return result;
 
   await sql`
-    INSERT INTO festival_content (tag, content) VALUES (${tag}, ${JSON.stringify(generated)}::jsonb)
+    INSERT INTO festival_content (tag, content) VALUES (${tag}, ${JSON.stringify(result.content)}::jsonb)
     ON CONFLICT (tag) DO UPDATE SET content = EXCLUDED.content
   `;
-  return generated;
+  return result;
 }
