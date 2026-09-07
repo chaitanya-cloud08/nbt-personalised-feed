@@ -4,16 +4,16 @@ import { strings } from "@/lib/strings.hi";
 import ArticleCard from "@/components/ArticleCard";
 import FeedResetCard from "@/components/FeedResetCard";
 
-// After this many articles, an inline "reset your interests" prompt is
-// shown once (see FeedResetCard) so recalibrating doesn't require leaving
-// the feed.
-const RESET_CARD_AFTER = 5;
+// Every this many articles, an inline "reset your interests" prompt is
+// shown (see FeedResetCard) so recalibrating doesn't require leaving the
+// feed — repeats throughout the whole scroll, not just once.
+const RESET_CARD_EVERY = 5;
 
 export default function FeedSection({ feed, hasFeatured = false }: { feed: ScoredArticle[]; hasFeatured?: boolean }) {
   // The featured/hero card above this section (if any) is visually the
-  // feed's first article, so it counts toward RESET_CARD_AFTER too — without
-  // this offset, "after 5 articles" would actually land after the 6th.
-  const triggerIndex = RESET_CARD_AFTER - 1 - (hasFeatured ? 1 : 0);
+  // feed's first article, so it counts toward the cadence too — without
+  // this offset, "every 5 articles" would actually land on the 6th, 11th, ...
+  const offset = hasFeatured ? 1 : 0;
 
   return (
     <section className="px-4 flex flex-col gap-3">
@@ -23,12 +23,15 @@ export default function FeedSection({ feed, hasFeatured = false }: { feed: Score
       {feed.length === 0 ? (
         <p className="text-on-surface-variant">{strings.feed.empty}</p>
       ) : (
-        feed.map((article, index) => (
-          <Fragment key={article.id}>
-            <ArticleCard article={article} />
-            {index === triggerIndex && <FeedResetCard />}
-          </Fragment>
-        ))
+        feed.map((article, index) => {
+          const onScreenPosition = offset + index + 1; // 1-indexed, counting the hero card
+          return (
+            <Fragment key={article.id}>
+              <ArticleCard article={article} />
+              {onScreenPosition % RESET_CARD_EVERY === 0 && <FeedResetCard />}
+            </Fragment>
+          );
+        })
       )}
     </section>
   );
