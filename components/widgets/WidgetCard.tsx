@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { WidgetEligible } from "@/lib/types";
 import { strings } from "@/lib/strings.hi";
 
@@ -35,9 +36,12 @@ export default function WidgetCard({ widget }: { widget: WidgetEligible }) {
   }
 
   if (widget.type === "festival") {
-    const { name_hi, days_remaining } = widget.data;
+    const { name_hi, days_remaining, tag } = widget.data;
     return (
-      <div className="shrink-0 w-64 h-40 rounded-lg p-4 shadow-sm flex flex-col justify-between bg-festival-bg border border-festival-bg">
+      <Link
+        href={`/festival/${tag}`}
+        className="shrink-0 w-64 h-40 rounded-lg p-4 shadow-sm flex flex-col justify-between bg-festival-bg border border-festival-bg"
+      >
         <div className="flex justify-between items-start">
           <span className="material-symbols-outlined text-festival-accent text-[24px]" aria-hidden="true">light_mode</span>
           <span className="text-[10px] text-festival-accent uppercase tracking-widest font-bold">
@@ -50,7 +54,7 @@ export default function WidgetCard({ widget }: { widget: WidgetEligible }) {
             {strings.widgets.festival.daysRemaining(name_hi, days_remaining)}
           </p>
         </div>
-      </div>
+      </Link>
     );
   }
 

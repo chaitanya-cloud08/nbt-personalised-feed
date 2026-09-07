@@ -36,7 +36,7 @@ export function checkFestival(now: Date = new Date()): WidgetEligible | null {
     if (diff >= 0 && diff <= FESTIVAL_WINDOW_DAYS) {
       return {
         type: "festival",
-        data: { name_hi: festival.name_hi, date: festival.date, days_remaining: diff },
+        data: { name_hi: festival.name_hi, date: festival.date, days_remaining: diff, tag: festival.tag },
       };
     }
   }
