@@ -73,6 +73,7 @@ export interface FestivalWidgetData {
   name_hi: string;
   date: string;
   days_remaining: number;
+  tag: string; // links to /festival/[tag]
 }
 
 export interface HoroscopeWidgetData {

@@ -70,6 +70,13 @@ export const strings = {
       daysRemaining: (name: string, days: number) =>
         days === 0 ? `आज ${name} है!` : `${name} में ${days} दिन बाकी`,
     },
+    festivalPage: {
+      significance: "महत्व",
+      tips: "कैसे मनाएं",
+      inspiration: "प्रेरणा",
+      backToFeed: "फ़ीड पर वापस जाएं",
+      unavailable: "इस त्योहार की विस्तृत जानकारी अभी उपलब्ध नहीं है।",
+    },
     horoscope: {
       title: "आज का राशिफल",
     },
@@ -99,6 +106,17 @@ export const strings = {
     settings: "सेटिंग्स",
   },
 };
+
+const MONTHS_HI = [
+  "जनवरी", "फ़रवरी", "मार्च", "अप्रैल", "मई", "जून",
+  "जुलाई", "अगस्त", "सितंबर", "अक्टूबर", "नवंबर", "दिसंबर",
+];
+
+/** Hindi date label, e.g. "14 सितंबर 2026", parsed from a "YYYY-MM-DD" date. */
+export function formatDateHi(dateISO: string): string {
+  const [year, month, day] = dateISO.split("-").map(Number);
+  return `${day} ${MONTHS_HI[month - 1]} ${year}`;
+}
 
 /** Hindi relative-time label, e.g. "30 मिनट पहले", "2 घंटे पहले", "3 दिन पहले". */
 export function timeAgoHi(publishedAt: string, now: Date = new Date()): string {
