@@ -80,6 +80,24 @@ export const strings = {
     horoscope: {
       title: "आज का राशिफल",
     },
+    brief: {
+      morningTitle: "सुबह की सुर्खियां",
+      afternoonTitle: "दिन की सुर्खियां",
+      eveningTitle: "शाम की सुर्खियां",
+      subtitle: "आज की टॉप खबरें आवाज़ में सुनें",
+      play: "सुनें",
+      pause: "रोकें",
+      resume: "जारी रखें",
+      stop: "बंद करें",
+      playing: "चल रहा है...",
+      morningGreeting: "सुप्रभात",
+      afternoonGreeting: "नमस्ते",
+      eveningGreeting: "शुभ संध्या",
+      introWithCity: (city: string) => `${city} से आज की मुख्य खबरें प्रस्तुत हैं।`,
+      introWithoutCity: "आज की मुख्य खबरें प्रस्तुत हैं।",
+      headlineNumber: (n: number) => `खबर ${n}।`,
+      outro: "यह था आज का समाचार सार। धन्यवाद।",
+    },
   },
 
   settings: {
@@ -116,6 +134,25 @@ const MONTHS_HI = [
 export function formatDateHi(dateISO: string): string {
   const [year, month, day] = dateISO.split("-").map(Number);
   return `${day} ${MONTHS_HI[month - 1]} ${year}`;
+}
+
+const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+
+export interface BriefTimeOfDay {
+  title: string;
+  greeting: string;
+}
+
+/** Morning/afternoon/evening copy for the audio brief widget, based on IST
+ * (this app is India-only) — computed server-side so the client doesn't
+ * need its own clock/timezone, which would risk a hydration mismatch
+ * against the server-rendered HTML. */
+export function briefTimeOfDay(now: Date = new Date()): BriefTimeOfDay {
+  const istHour = new Date(now.getTime() + IST_OFFSET_MS).getUTCHours();
+  const b = strings.widgets.brief;
+  if (istHour < 12) return { title: b.morningTitle, greeting: b.morningGreeting };
+  if (istHour < 17) return { title: b.afternoonTitle, greeting: b.afternoonGreeting };
+  return { title: b.eveningTitle, greeting: b.eveningGreeting };
 }
 
 /** Hindi relative-time label, e.g. "30 मिनट पहले", "2 घंटे पहले", "3 दिन पहले". */
