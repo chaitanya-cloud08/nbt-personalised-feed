@@ -27,7 +27,7 @@ export default async function FeedPage() {
       <main className="flex-1 w-full bg-surface-bright pb-6 flex flex-col gap-4">
         <WidgetCarousel />
         {featured && <FeaturedArticleCard article={featured} />}
-        <FeedSection feed={rest} />
+        <FeedSection feed={rest} hasFeatured={!!featured} />
       </main>
       <BottomNav />
     </>
